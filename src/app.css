@@ -1,0 +1,34 @@
+* {
+	box-sizing: border-box;
+}
+
+body {
+	margin: 0;
+}
+
+#svelte {
+	display: flex;
+	flex-direction: column;
+}
+
+main {
+	display: flex;
+	flex-direction: column;
+	width: min(80ch, 100%);
+	margin: 0 auto;
+}
+
+.btn {
+	border: 1px solid black;
+	background: white;
+	padding: 1em;
+}
+
+.btn:hover {
+	background-color: lightgray;
+}
+
+.btn:active {
+	background-color: gray;
+	color: white;
+}
