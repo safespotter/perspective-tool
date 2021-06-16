@@ -10,9 +10,10 @@
 	let view: HTMLCanvasElement;
 	let handle: HTMLCanvasElement;
 
-	let originalImage = null;
+	let originalImage: ImageData = null;
 	let rotationAngle = 0;
-	let cachedTransform = null;
+	let cachedTransform: number[][] = null;
+	let image: ImageData = null;
 
 	$: transform = [
 		[Math.cos(rotationAngle), -Math.sin(rotationAngle), 0],
@@ -74,15 +75,14 @@
 				const v = Math.floor(i / view.width) / view.height;
 				return applyTransform([u, v], transform);
 			});
-		let img = view.getContext('2d').createImageData(view.width, view.height);
 		const pixels = await getPixelsFromUVMap(originalImage, uvmap);
-		for (let i = 0; i < img.width * img.height; i++) {
-			img.data[i * 4 + 0] = pixels[i * 4][0];
-			img.data[i * 4 + 1] = pixels[i * 4][1];
-			img.data[i * 4 + 2] = pixels[i * 4][2];
-			img.data[i * 4 + 3] = pixels[i * 4][3];
+		for (let i = 0; i < image.width * image.height; i++) {
+			image.data[i * 4 + 0] = pixels[i][0];
+			image.data[i * 4 + 1] = pixels[i][1];
+			image.data[i * 4 + 2] = pixels[i][2];
+			image.data[i * 4 + 3] = pixels[i][3];
 		}
-		view.getContext('2d').putImageData(img, 0, 0);
+		view.getContext('2d').putImageData(image, 0, 0);
 
 		cachedTransform = transform;
 		setTimeout(drawLoop);
@@ -101,6 +101,7 @@
 			handleCtx.putImageData(imageData, offset.u, offset.v);
 
 			originalImage = handleCtx.getImageData(0, 0, handle.width, handle.height);
+			image = view.getContext('2d').createImageData(view.width, view.height);
 		} catch (e) {
 			return goto('/');
 		}
