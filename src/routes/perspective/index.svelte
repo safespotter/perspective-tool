@@ -2,6 +2,7 @@
 	import { goto } from '$app/navigation';
 
 	import { session } from '$app/stores';
+	import { getPixelsFromUVMap } from '$lib/image/manipulation';
 	import { onMount } from 'svelte';
 
 	const viewDim = 480;
@@ -45,27 +46,10 @@
 		};
 	}
 
-	/**
-	 * get [r, g, b, a] from the image
-	 *
-	 * @param img original image
-	 * @param u range 0:1
-	 * @param v range 0:1
-	 */
-	function getPixelFromUV(img: ImageData, u: number, v: number) {
-		if (u >= 1 || v >= 1 || u < 0 || v < 0) return [0, 0, 0, 0];
-
-		const imgU = Math.floor(u * img.width);
-		const imgV = Math.floor(v * img.height);
-
-		const i = (img.width * imgV + imgU) * 4;
-
-		const pixel = [img.data[i + 0], img.data[i + 1], img.data[i + 2], img.data[i + 3]];
-
-		return pixel;
-	}
-
-	function applyTransform(point: number[], transform: number[][]) {
+	function applyTransform(
+		point: [u: number, v: number],
+		transform: number[][]
+	): [u: number, v: number] {
 		const p = [...point, 1];
 		if (p.length !== transform.length) {
 			console.error('applyTransform: point and transform have different dimensions');
@@ -74,29 +58,29 @@
 		const tP = transform.map((row) => row.reduce((acc, _, i) => acc + row[i] * p[i], 0));
 
 		const transformedPoint = tP.map((n) => n / tP[tP.length - 1]).slice(0, -1);
-		return transformedPoint;
+		return transformedPoint as [u: number, v: number];
 	}
 
-	function drawLoop() {
+	async function drawLoop() {
 		if (transform === cachedTransform) {
 			setTimeout(drawLoop);
 			return;
 		}
 
+		const uvmap = Array(view.width * view.height)
+			.fill(0)
+			.map((_, i) => {
+				const u = (i % view.width) / view.width;
+				const v = Math.floor(i / view.width) / view.height;
+				return applyTransform([u, v], transform);
+			});
 		let img = view.getContext('2d').createImageData(view.width, view.height);
+		const pixels = await getPixelsFromUVMap(originalImage, uvmap);
 		for (let i = 0; i < img.width * img.height; i++) {
-			const index = i * 4;
-			const u = (i % img.width) / img.width;
-			const v = Math.floor(i / img.width) / img.height;
-
-			const [tU, tV] = applyTransform([u, v], transform);
-
-			const [r, g, b, a] = getPixelFromUV(originalImage, tU, tV);
-
-			img.data[index + 0] = r;
-			img.data[index + 1] = g;
-			img.data[index + 2] = b;
-			img.data[index + 3] = a;
+			img.data[i * 4 + 0] = pixels[i * 4][0];
+			img.data[i * 4 + 1] = pixels[i * 4][1];
+			img.data[i * 4 + 2] = pixels[i * 4][2];
+			img.data[i * 4 + 3] = pixels[i * 4][3];
 		}
 		view.getContext('2d').putImageData(img, 0, 0);
 
