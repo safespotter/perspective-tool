@@ -4,6 +4,8 @@
 	import { session } from '$app/stores';
 	import { onMount } from 'svelte';
 
+	const viewDim = 120;
+
 	let view: HTMLCanvasElement;
 	let handle: HTMLCanvasElement;
 
@@ -51,6 +53,8 @@
 	 * @param v range 0:1
 	 */
 	function getPixelFromUV(img: ImageData, u: number, v: number) {
+		if (u >= 1 || v >= 1 || u < 0 || v < 0) return [0, 0, 0, 0];
+
 		const imgU = Math.floor(u * img.width);
 		const imgV = Math.floor(v * img.height);
 
@@ -61,18 +65,33 @@
 		return pixel;
 	}
 
+	function applyTransform(point: number[], transform: number[][]) {
+		const p = [...point, 1];
+		if (p.length !== transform.length) {
+			console.error('applyTransform: point and transform have different dimensions');
+			return;
+		}
+		const tP = transform.map((row) => row.reduce((acc, _, i) => acc + row[i] * p[i], 0));
+
+		const transformedPoint = tP.map((n) => n / tP[tP.length - 1]).slice(0, -1);
+		return transformedPoint;
+	}
+
 	function drawLoop() {
 		if (transform === cachedTransform) {
-			requestAnimationFrame(drawLoop);
+			setTimeout(drawLoop);
 			return;
 		}
 
 		let img = view.getContext('2d').createImageData(view.width, view.height);
 		for (let i = 0; i < img.width * img.height; i++) {
 			const index = i * 4;
-			const u = i % img.width;
-			const v = Math.floor(i / img.width);
-			const [r, g, b, a] = getPixelFromUV(originalImage, u / img.width, v / img.height);
+			const u = (i % img.width) / img.width;
+			const v = Math.floor(i / img.width) / img.height;
+
+			const [tU, tV] = applyTransform([u, v], transform);
+
+			const [r, g, b, a] = getPixelFromUV(originalImage, tU, tV);
 
 			img.data[index + 0] = r;
 			img.data[index + 1] = g;
@@ -81,7 +100,8 @@
 		}
 		view.getContext('2d').putImageData(img, 0, 0);
 
-		requestAnimationFrame(drawLoop);
+		cachedTransform = transform;
+		setTimeout(drawLoop);
 	}
 
 	onMount(() => {
@@ -101,16 +121,18 @@
 			return goto('/');
 		}
 
-		requestAnimationFrame(drawLoop);
+		setTimeout(drawLoop);
 	});
 </script>
 
 <main>
-	<canvas class="viewer" bind:this={view} width="1000" height="1000">
+	<canvas class="viewer" bind:this={view} width={viewDim} height={viewDim}>
 		This webapp requires javascript
 	</canvas>
-	<canvas hidden bind:this={handle} />
+	<input type="range" bind:value={rotationAngle} min="-3.15" max="3.15" step=".05" />
 </main>
+
+<canvas hidden bind:this={handle} />
 
 <style>
 	.viewer {
