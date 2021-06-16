@@ -4,7 +4,7 @@
 	import { session } from '$app/stores';
 	import { onMount } from 'svelte';
 
-	const viewDim = 120;
+	const viewDim = 480;
 
 	let view: HTMLCanvasElement;
 	let handle: HTMLCanvasElement;
