@@ -1,38 +1,83 @@
-# create-svelte
+# Steps to go from world to camera to image
 
-Everything you need to build a Svelte project, powered by [`create-svelte`](https://github.com/sveltejs/kit/tree/master/packages/create-svelte);
+Using homogenous coordinates, so a 2d point has length 3 and a 3d point has length 4
 
-## Creating a project
+1. Transform world coordinates to camera coordinates
 
-If you're seeing this, you've probably already done this step. Congrats!
+   - Origin at camera position
+   - Z axis is the normal of the image plane
+   - X goes right, Y goes down
 
-```bash
-# create a new project in the current directory
-npm init svelte@next
+    <br>
 
-# create a new project in my-app
-npm init svelte@next my-app
+```
+    w is world
+    c is camera
+    tr is translation
+    rot is rotation
+    ^-1 is inverse
+    PC is pitch
+    YW is yaw
+    RL is roll
+
+    (rot(axis(w)->axis(c)) * tr(w->c))^-1
+
+ROTATION w->c
+|  cos(PC)cos(YW)cos(RL)-sin(PC)sin(RL); cos(PC)cos(YW)sin(RL)+sin(PC)cos(RL);-cos(PC)sin(YW);0 |
+| -sin(PC)cos(YW)cos(RL)-cos(PC)sin(RL);-sin(PC)cos(YW)sin(RL)+cos(PC)cos(RL); sin(PC)sin(YW);0 |
+|                        sin(YW)cos(RL);                       sin(YW)sin(RL);        cos(YW);0 |
+|                                     0;                                    0;              0;1 |
+
+*
+
+TRANSLATION w->c
+| 1 0 0 Xc |
+| 0 1 0 Yc |
+| 0 0 1 Zc |
+| 0 0 0  1 |
+
+^-1
+
+-------------
+
+w -> c
+|  cos(PC)cos(YW)cos(RL)-sin(PC)sin(RL); cos(PC)cos(YW)sin(RL)+sin(PC)cos(RL);-cos(PC)sin(YW);Xc |
+| -sin(PC)cos(YW)cos(RL)-cos(PC)sin(RL);-sin(PC)cos(YW)sin(RL)+cos(PC)cos(RL); sin(PC)sin(YW);Yc |
+|                        sin(YW)cos(RL);                       sin(YW)sin(RL);        cos(YW);Zc |
+|                                     0;                                    0;              0; 1 |
+
+^-1
 ```
 
-> Note: the `@next` is temporary
+2. Transform camera coordinates to pixels
 
-## Developing
+   - The distance from the camera to the image plane is F
+   - Use euclidean point as input
+   - Transform matrix is 3x3, so we are losing one dimension
 
-Once you've created a project and installed dependencies with `npm install` (or `pnpm install` or `yarn`), start a development server:
+   <br>
 
-```bash
-npm run dev
+   ```
+   c is camera coords, p is pixel coords
 
-# or start the server and open the app in a new browser tab
-npm run dev -- --open
-```
+   O(x,y) is the center of the image
+   f is the focal length is pixel width
+   a is the aspect ratio (h/w)
 
-## Building
+   c -> p
+   normalize c (divide for homogeneous coord) and only use real coords
 
-Before creating a production version of your app, install an [adapter](https://kit.svelte.dev/docs#adapters) for your target environment. Then:
+   PROJECTION
+   |f   0  Ox|
+   |0 f*a  Oy|
+   |0   0   1|
 
-```bash
-npm run build
-```
+   normalize p
 
-> You can preview the built app with `npm run preview`, regardless of whether you installed an adapter. This should _not_ be used to serve your app in production.
+   ---------
+   p -> c with fixed plane
+
+   3 equations from PROJECTION(c->p)^-1
+   1 equation from the plane (TRANSLATION(w->c) * Z0)
+
+   ```
