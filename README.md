@@ -8,7 +8,42 @@ Using homogenous coordinates, so a 2d point has length 3 and a 3d point has leng
    - Z axis is the normal of the image plane
    - X goes right, Y goes down
 
-    <br>
+2. Transform camera coordinates to pixels
+
+   - The distance from the camera to the image plane is F
+   - Use euclidean point as input
+   - Transform matrix is 3x3, so we are losing one dimension
+
+# Steps to invert the stuff above and restore the world
+
+1. Image to camera
+
+```
+ c is camera coords, p is pixel coords
+
+ O(x,y) is the center of the image
+ f is the focal length is pixel width
+ a is the aspect ratio (h/w)
+
+ c -> p
+ normalize c (divide for homogeneous coord) and only use real coords
+
+ PROJECTION
+ |f   0  Ox|
+ |0 f*a  Oy|
+ |0   0   1|
+
+ normalize p
+
+ ---------
+ p -> c with fixed plane
+
+ 3 equations from PROJECTION(c->p)^-1
+ 1 equation from the plane (TRANSLATION(w->c) * Z0)
+
+```
+
+2. Camera to world
 
 ```
     w is world
@@ -48,36 +83,3 @@ w -> c
 
 ^-1
 ```
-
-2. Transform camera coordinates to pixels
-
-   - The distance from the camera to the image plane is F
-   - Use euclidean point as input
-   - Transform matrix is 3x3, so we are losing one dimension
-
-   <br>
-
-   ```
-   c is camera coords, p is pixel coords
-
-   O(x,y) is the center of the image
-   f is the focal length is pixel width
-   a is the aspect ratio (h/w)
-
-   c -> p
-   normalize c (divide for homogeneous coord) and only use real coords
-
-   PROJECTION
-   |f   0  Ox|
-   |0 f*a  Oy|
-   |0   0   1|
-
-   normalize p
-
-   ---------
-   p -> c with fixed plane
-
-   3 equations from PROJECTION(c->p)^-1
-   1 equation from the plane (TRANSLATION(w->c) * Z0)
-
-   ```
