@@ -3,9 +3,10 @@
 
 	import { session } from '$app/stores';
 	import { getPixelsFromUVMap } from '$lib/image/manipulation';
+	import { uvMapFromDimensions, mapTransform } from '$lib/image/transform';
 	import { onMount } from 'svelte';
 
-	const viewDim = 480;
+	const viewDim = 120;
 
 	let view: HTMLCanvasElement;
 	let handle: HTMLCanvasElement;
@@ -14,6 +15,7 @@
 	let rotationAngle = 0;
 	let cachedTransform: number[][] = null;
 	let image: ImageData = null;
+	let uvmap: [u: number, v: number][];
 
 	$: transform = [
 		[Math.cos(rotationAngle), -Math.sin(rotationAngle), 0],
@@ -47,35 +49,16 @@
 		};
 	}
 
-	function applyTransform(
-		point: [u: number, v: number],
-		transform: number[][]
-	): [u: number, v: number] {
-		const p = [...point, 1];
-		if (p.length !== transform.length) {
-			console.error('applyTransform: point and transform have different dimensions');
-			return;
-		}
-		const tP = transform.map((row) => row.reduce((acc, _, i) => acc + row[i] * p[i], 0));
-
-		const transformedPoint = tP.map((n) => n / tP[tP.length - 1]).slice(0, -1);
-		return transformedPoint as [u: number, v: number];
-	}
-
 	async function drawLoop() {
 		if (transform === cachedTransform) {
 			setTimeout(drawLoop);
 			return;
 		}
 
-		const uvmap = Array(view.width * view.height)
-			.fill(0)
-			.map((_, i) => {
-				const u = (i % view.width) / view.width;
-				const v = Math.floor(i / view.width) / view.height;
-				return applyTransform([u, v], transform);
-			});
-		const pixels = await getPixelsFromUVMap(originalImage, uvmap);
+		cachedTransform = transform;
+		const transformedUvMap = await mapTransform(uvmap, transform);
+		const pixels = await getPixelsFromUVMap(originalImage, transformedUvMap);
+
 		for (let i = 0; i < image.width * image.height; i++) {
 			image.data[i * 4 + 0] = pixels[i][0];
 			image.data[i * 4 + 1] = pixels[i][1];
@@ -84,7 +67,6 @@
 		}
 		view.getContext('2d').putImageData(image, 0, 0);
 
-		cachedTransform = transform;
 		setTimeout(drawLoop);
 	}
 
@@ -102,6 +84,7 @@
 
 			originalImage = handleCtx.getImageData(0, 0, handle.width, handle.height);
 			image = view.getContext('2d').createImageData(view.width, view.height);
+			uvmap = uvMapFromDimensions(view.width, view.height);
 		} catch (e) {
 			return goto('/');
 		}
