@@ -6,7 +6,7 @@ let worker: Worker = null;
  * @returns list of [r,g,b,a] (0:255) pixels on the coordinates provided
  */
 export async function getPixelsFromUVMap(img: ImageData, uvmap: [u: number, v: number][]) {
-	if (!window.Worker) {
+	if (!window.Worker || true) {
 		return new Promise((resolve: (data: [r: number, g: number, b: number, a: number][]) => void) =>
 			resolve(_getPixelsFromUVMap(img, uvmap))
 		);

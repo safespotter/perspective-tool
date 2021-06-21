@@ -6,10 +6,10 @@
  * @param v range 0:1
  */
 function _getPixelFromUV(img, u, v) {
-	if (u >= 1 || v >= 1 || u < 0 || v < 0) return [0, 0, 0, 0];
+	if (u >= 0.5 || v >= 0.5 || u < -0.5 || v < -0.5) return [0, 0, 0, 0];
 
-	const imgU = Math.floor(u * img.width);
-	const imgV = Math.floor(v * img.height);
+	const imgU = Math.floor((u + 0.5) * img.width);
+	const imgV = Math.floor((v + 0.5) * img.height);
 
 	const i = (img.width * imgV + imgU) * 4;
 

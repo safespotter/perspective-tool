@@ -1,9 +1,19 @@
 <script lang="ts">
+	import { add, multiply, inv, transpose } from 'mathjs';
+
 	import { goto } from '$app/navigation';
 
 	import { session } from '$app/stores';
 	import { getPixelsFromUVMap } from '$lib/image/manipulation';
-	import { uvMapFromDimensions, mapTransform } from '$lib/image/transform';
+	import {
+		uvMapFromDimensions,
+		mapTransform,
+		rotationZAxis,
+		rotationYAxis,
+		rotationXAxis,
+		translate,
+		restoreProjection,
+	} from '$lib/image/transform';
 	import { onMount } from 'svelte';
 
 	const viewDim = 120;
@@ -12,16 +22,48 @@
 	let handle: HTMLCanvasElement;
 
 	let originalImage: ImageData = null;
-	let rotationAngle = 0;
 	let cachedTransform: number[][] = null;
 	let image: ImageData = null;
 	let uvmap: [u: number, v: number][];
 
-	$: transform = [
-		[Math.cos(rotationAngle), -Math.sin(rotationAngle), 0],
-		[Math.sin(rotationAngle), Math.cos(rotationAngle), 0],
-		[0, 0, 1]
-	];
+	let rotation = {
+		pitch: Math.PI / 2,
+		yaw: 0,
+		roll: 0,
+	};
+
+	let translation = {
+		x: 0,
+		y: 2,
+		z: 0,
+	};
+
+	let focusLength = 1;
+
+	$: cameraRotation = multiply(
+		rotationZAxis(Number(rotation.roll)),
+		multiply(rotationYAxis(Number(rotation.yaw)), rotationXAxis(Number(rotation.pitch)))
+	);
+
+	$: imageTransform = multiply(
+		translate(Number(translation.x), Number(translation.y), Number(translation.z)),
+		multiply(cameraRotation, translate(0, 0, Number(focusLength)))
+	);
+
+	$: inverseImageTransform = inv(imageTransform);
+
+	// $: plane = multiply(inverseImageTransform, [[0], [1], [0], [0]]).flat() as [
+	// 	a: number,
+	// 	b: number,
+	// 	c: number,
+	// 	d: number
+	// ];
+
+	$: plane = [0, 0, translation.y, 0];
+
+	$: projection = restoreProjection(plane, focusLength);
+
+	$: transform = multiply(inverseImageTransform, projection);
 
 	function computeOffsetAndDimensions(
 		view: { width: number; height: number },
@@ -40,12 +82,12 @@
 		return {
 			offset: {
 				u: offset[0],
-				v: offset[1]
+				v: offset[1],
 			},
 			dimensions: {
 				width: viewWidth,
-				height: viewHeight
-			}
+				height: viewHeight,
+			},
 		};
 	}
 
@@ -55,8 +97,16 @@
 			return;
 		}
 
+		console.log('LOG');
+		console.log({ plane: plane });
+		console.log({ inverseImageTransform: inverseImageTransform });
+		console.log({ cameraRotation: cameraRotation });
+		console.log({ projection: projection });
+		console.log({ transform: transform });
+
 		cachedTransform = transform;
 		const transformedUvMap = await mapTransform(uvmap, transform);
+		console.log({ res: transformedUvMap });
 		const pixels = await getPixelsFromUVMap(originalImage, transformedUvMap);
 
 		for (let i = 0; i < image.width * image.height; i++) {
@@ -97,7 +147,75 @@
 	<canvas class="viewer" bind:this={view} width={viewDim} height={viewDim}>
 		This webapp requires javascript
 	</canvas>
-	<input type="range" bind:value={rotationAngle} min="-3.15" max="3.15" step=".05" />
+
+	<label for="focus">Focus length</label>
+	<input
+		type="number"
+		name="focus"
+		id="focus"
+		min=".1"
+		max="10"
+		step=".1"
+		bind:value={focusLength}
+	/>
+	<fieldset>
+		<legend>Camera Position</legend>
+		<label for="x">X</label>
+		<input
+			type="number"
+			name="x"
+			id="x"
+			min="-100"
+			max="100"
+			step=".1"
+			bind:value={translation.x}
+		/>
+		<label for="y">Y</label>
+		<input
+			type="number"
+			name="y"
+			id="y"
+			min="-100"
+			max="100"
+			step=".1"
+			bind:value={translation.y}
+		/>
+		<label for="z">Z</label>
+		<input
+			type="number"
+			name="z"
+			id="x"
+			min="-100"
+			max="100"
+			step=".1"
+			bind:value={translation.z}
+		/>
+	</fieldset>
+	<fieldset>
+		<legend>Camera Rotation</legend>
+		<label for="x">X</label>
+		<input
+			type="number"
+			name="x"
+			id="x"
+			min="-100"
+			max="100"
+			step=".1"
+			bind:value={rotation.pitch}
+		/>
+		<label for="y">Y</label>
+		<input type="number" name="y" id="y" min="-100" max="100" step=".1" bind:value={rotation.yaw} />
+		<label for="z">Z</label>
+		<input
+			type="number"
+			name="z"
+			id="x"
+			min="-100"
+			max="100"
+			step=".1"
+			bind:value={rotation.roll}
+		/>
+	</fieldset>
 </main>
 
 <canvas hidden bind:this={handle} />
