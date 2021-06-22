@@ -15,7 +15,7 @@
 	} from '$lib/image/transform';
 	import { onMount } from 'svelte';
 
-	const viewDim = 240;
+	const viewDim = 320;
 
 	let view: HTMLCanvasElement;
 	let handle: HTMLCanvasElement;
@@ -51,14 +51,18 @@
 
 	$: inverseImageTransform = inv(imageTransform);
 
-	// $: plane = multiply(inverseImageTransform, [[0], [1], [0], [0]]).flat() as [
-	// 	a: number,
-	// 	b: number,
-	// 	c: number,
-	// 	d: number
-	// ];
+	$: planeOrigin = multiply(inverseImageTransform, transpose([0, 0, 0, 1])).flat();
 
-	$: plane = [0, 0, -1, translation.z];
+	$: planeNormal = multiply(inv(cameraRotation), transpose([0, 0, -1, 1])).flat();
+
+	$: plane = [
+		planeNormal[0],
+		planeNormal[1],
+		planeNormal[2],
+		planeNormal[0] * planeOrigin[0] +
+			planeNormal[1] * planeOrigin[1] +
+			planeNormal[2] * planeOrigin[2],
+	];
 
 	$: projection = restoreProjection(plane, focusLength);
 
@@ -102,6 +106,7 @@
 		console.log({ cameraRotation: cameraRotation });
 		console.log({ projection: projection });
 		console.log({ transform: transform });
+		console.log({ '??plane??': multiply(translate(21, 31, 1), transpose([0, 0, 1, 1])).flat() });
 
 		cachedTransform = transform;
 		const transformedUvMap = await mapTransform(uvmap, transform);
