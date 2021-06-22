@@ -1,16 +1,5 @@
 let worker = null;
 
-export function uvMapFromDimensions(width, height) {
-	const uvmap = Array(width * height);
-	for (let v = 0; v < height; v++) {
-		const cursor = v * width;
-		for (let u = 0; u < height; u++) {
-			uvmap[cursor + u] = [u / width - 0.5, v / height - 0.5];
-		}
-	}
-	return uvmap;
-}
-
 export function applyTransform(point: [u: number, v: number], transform: number[][]) {
 	const p = [...point, 1];
 	const tP = transform.map((row) => row.reduce((acc, _, i) => acc + row[i] * p[i], 0));
@@ -23,7 +12,7 @@ export async function mapTransform(uvmap: [u: number, v: number][], transform: n
 			let res = uvmap.map((p) => applyTransform(p, transform));
 			res = res.map((arr) => {
 				const a = arr.map((n) => n / arr[3]);
-				return [a[0], a[2]];
+				return [a[0], a[1]];
 				// return a;
 			});
 			resolve(res);

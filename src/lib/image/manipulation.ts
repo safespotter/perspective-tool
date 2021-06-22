@@ -1,5 +1,7 @@
 let worker: Worker = null;
 
+const range = 2;
+
 /**
  * @param img original image that we want to get the pixels from
  * @param uvmap list of uv coordinates (with range 0:1) that we want to get pixels from
@@ -32,10 +34,14 @@ export async function getPixelsFromUVMap(img: ImageData, uvmap: [u: number, v: n
  * @param v range 0:1
  */
 function _getPixelFromUV(img, u, v) {
-	if (u >= 1 || v >= 1 || u < 0 || v < 0) return [0, 0, 0, 0];
+	const vWeight = img.height / range;
+	const uWeight = img.width / range;
+	const half = range / 2;
 
-	const imgU = Math.floor(u * img.width);
-	const imgV = Math.floor(v * img.height);
+	if (u >= half || v >= half || u < -half || v < -half) return [0, 0, 0, 0];
+
+	const imgU = Math.floor((u + half) * uWeight);
+	const imgV = Math.floor((v + half) * vWeight);
 
 	const i = (img.width * imgV + imgU) * 4;
 
@@ -51,4 +57,20 @@ function _getPixelFromUV(img, u, v) {
  */
 function _getPixelsFromUVMap(img, uvmap) {
 	return uvmap.map(([u, v]) => _getPixelFromUV(img, u, v));
+}
+
+export function uvMapFromDimensions(width, height) {
+	const uvmap = Array(width * height);
+
+	const vWeight = range / height;
+	const uWeight = range / width;
+	const half = range / 2;
+
+	for (let v = 0; v < height; v++) {
+		const cursor = v * width;
+		for (let u = 0; u < height; u++) {
+			uvmap[cursor + u] = [u * uWeight - half, v * vWeight - half];
+		}
+	}
+	return uvmap;
 }

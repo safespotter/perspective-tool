@@ -4,9 +4,8 @@
 	import { goto } from '$app/navigation';
 
 	import { session } from '$app/stores';
-	import { getPixelsFromUVMap } from '$lib/image/manipulation';
+	import { uvMapFromDimensions, getPixelsFromUVMap } from '$lib/image/manipulation';
 	import {
-		uvMapFromDimensions,
 		mapTransform,
 		rotationZAxis,
 		rotationYAxis,
@@ -16,7 +15,7 @@
 	} from '$lib/image/transform';
 	import { onMount } from 'svelte';
 
-	const viewDim = 120;
+	const viewDim = 240;
 
 	let view: HTMLCanvasElement;
 	let handle: HTMLCanvasElement;
@@ -27,15 +26,15 @@
 	let uvmap: [u: number, v: number][];
 
 	let rotation = {
-		pitch: Math.PI / 2,
+		pitch: 0,
 		yaw: 0,
 		roll: 0,
 	};
 
 	let translation = {
 		x: 0,
-		y: 2,
-		z: 0,
+		y: 0,
+		z: 10,
 	};
 
 	let focusLength = 1;
@@ -59,7 +58,7 @@
 	// 	d: number
 	// ];
 
-	$: plane = [0, 0, translation.y, 0];
+	$: plane = [0, 0, -1, translation.z];
 
 	$: projection = restoreProjection(plane, focusLength);
 
@@ -106,6 +105,7 @@
 
 		cachedTransform = transform;
 		const transformedUvMap = await mapTransform(uvmap, transform);
+		console.log({ orig: uvmap });
 		console.log({ res: transformedUvMap });
 		const pixels = await getPixelsFromUVMap(originalImage, transformedUvMap);
 
