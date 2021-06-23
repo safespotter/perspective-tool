@@ -1,3 +1,7 @@
+:root {
+	font-family: sans-serif;
+}
+
 * {
 	box-sizing: border-box;
 }
@@ -21,7 +25,10 @@ main {
 .btn {
 	border: 1px solid black;
 	background: white;
-	padding: 1em;
+	padding: 1em 2em;
+	text-decoration: none;
+	color: black;
+	font-family: inherit;
 }
 
 .btn:hover {

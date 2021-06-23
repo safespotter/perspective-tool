@@ -19,6 +19,9 @@ export async function mapTransform(uvmap: [u: number, v: number][][], transform:
 					res[i] += vec[j] * transform[i][j];
 				}
 			}
+			if (res[3] === 0) {
+				res[3] = 0.000001;
+			}
 			return [res[0] / res[3], res[1] / res[3]];
 			// return res;
 		})

@@ -15,7 +15,7 @@
 	} from '$lib/image/transform';
 	import { onMount } from 'svelte';
 
-	const viewDim = 640;
+	const viewDim = 320;
 
 	let view: HTMLCanvasElement;
 	let handle: HTMLCanvasElement;
@@ -37,7 +37,7 @@
 		z: 10,
 	};
 
-	let focusLength = 1;
+	let focalLength = 1;
 
 	$: cameraRotation = multiply(
 		rotationZAxis(Number(rotation.roll)),
@@ -46,14 +46,17 @@
 
 	$: imageTransform = multiply(
 		translate(Number(translation.x), Number(translation.y), Number(translation.z)),
-		multiply(cameraRotation, translate(0, 0, Number(focusLength)))
+		multiply(cameraRotation, translate(0, 0, Number(focalLength)))
 	);
 
 	$: inverseImageTransform = inv(imageTransform);
 
-	$: planeOrigin = multiply(inverseImageTransform, transpose([0, 0, 0, 1])).flat();
+	$: planeOrigin = multiply(
+		inverseImageTransform,
+		transpose([translation.x, translation.y, 0, 1])
+	).flat();
 
-	$: planeNormal = multiply(inv(cameraRotation), transpose([0, 0, -1, 1])).flat();
+	$: planeNormal = multiply(inv(cameraRotation), transpose([0, 0, 1, 1])).flat();
 
 	$: plane = [
 		planeNormal[0],
@@ -64,7 +67,7 @@
 			planeNormal[2] * planeOrigin[2],
 	];
 
-	$: projection = restoreProjection(plane, focusLength);
+	$: projection = restoreProjection(plane, focalLength);
 
 	$: transform = multiply(inverseImageTransform, projection);
 
@@ -143,15 +146,15 @@
 		This webapp requires javascript
 	</canvas>
 
-	<label for="focus">Focus length</label>
+	<label for="focal">Focal length</label>
 	<input
 		type="number"
-		name="focus"
-		id="focus"
+		name="focal"
+		id="focal"
 		min=".1"
 		max="10"
 		step=".1"
-		bind:value={focusLength}
+		bind:value={focalLength}
 	/>
 	<fieldset>
 		<legend>Camera Position</legend>
@@ -211,6 +214,7 @@
 			bind:value={rotation.roll}
 		/>
 	</fieldset>
+	<a href="/" class="btn">Back</a>
 </main>
 
 <canvas hidden bind:this={handle} />
@@ -218,5 +222,8 @@
 <style>
 	.viewer {
 		border: 1px solid black;
+	}
+	.btn {
+		margin: 1em auto;
 	}
 </style>
