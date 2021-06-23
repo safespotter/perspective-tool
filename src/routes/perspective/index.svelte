@@ -15,7 +15,7 @@
 	} from '$lib/image/transform';
 	import { onMount } from 'svelte';
 
-	const viewDim = 320;
+	const viewDim = 640;
 
 	let view: HTMLCanvasElement;
 	let handle: HTMLCanvasElement;
@@ -23,7 +23,7 @@
 	let originalImage: ImageData = null;
 	let cachedTransform: number[][] = null;
 	let image: ImageData = null;
-	let uvmap: [u: number, v: number][];
+	let uvmap: [u: number, v: number][][];
 
 	let rotation = {
 		pitch: 0,
@@ -100,18 +100,8 @@
 			return;
 		}
 
-		console.log('LOG');
-		console.log({ plane: plane });
-		console.log({ inverseImageTransform: inverseImageTransform });
-		console.log({ cameraRotation: cameraRotation });
-		console.log({ projection: projection });
-		console.log({ transform: transform });
-		console.log({ '??plane??': multiply(translate(21, 31, 1), transpose([0, 0, 1, 1])).flat() });
-
 		cachedTransform = transform;
 		const transformedUvMap = await mapTransform(uvmap, transform);
-		console.log({ orig: uvmap });
-		console.log({ res: transformedUvMap });
 		const pixels = await getPixelsFromUVMap(originalImage, transformedUvMap);
 
 		for (let i = 0; i < image.width * image.height; i++) {

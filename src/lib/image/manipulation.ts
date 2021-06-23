@@ -1,5 +1,4 @@
 let worker: Worker = null;
-
 const range = 2;
 
 /**
@@ -7,20 +6,20 @@ const range = 2;
  * @param uvmap list of uv coordinates (with range 0:1) that we want to get pixels from
  * @returns list of [r,g,b,a] (0:255) pixels on the coordinates provided
  */
-export async function getPixelsFromUVMap(img: ImageData, uvmap: [u: number, v: number][]) {
-	if (!window.Worker || true) {
+export async function getPixelsFromUVMap(img: ImageData, uvmap: [u: number, v: number][][]) {
+	if (!window.Worker) {
 		return new Promise((resolve: (data: [r: number, g: number, b: number, a: number][]) => void) =>
 			resolve(_getPixelsFromUVMap(img, uvmap))
 		);
 	} else {
 		if (!worker) {
-			worker = new Worker('src/lib/image/webworkers/manipulation.js');
+			worker = new Worker('src/lib/image/workers/manipulation.js');
 		}
 
 		return new Promise(
 			(resolve: (data: [r: number, g: number, b: number, a: number][]) => void) => {
 				worker.onmessage = (e) => resolve(e.data);
-				worker.postMessage([img, uvmap]);
+				worker.postMessage([img, uvmap, range]);
 			}
 		);
 	}
@@ -33,7 +32,7 @@ export async function getPixelsFromUVMap(img: ImageData, uvmap: [u: number, v: n
  * @param u range 0:1
  * @param v range 0:1
  */
-function _getPixelFromUV(img, u, v) {
+function _getPixelFromUV(img, u, v): [r: number, g: number, b: number, a: number] {
 	const vWeight = img.height / range;
 	const uWeight = img.width / range;
 	const half = range / 2;
@@ -47,7 +46,7 @@ function _getPixelFromUV(img, u, v) {
 
 	const pixel = [img.data[i + 0], img.data[i + 1], img.data[i + 2], img.data[i + 3]];
 
-	return pixel;
+	return pixel as [r: number, g: number, b: number, a: number];
 }
 
 /**
@@ -55,22 +54,23 @@ function _getPixelFromUV(img, u, v) {
  * @param uvmap list of uv coordinates (with range 0:1) that we want to get pixels from
  * @returns list of [r,g,b,a] (0:255) pixels on the coordinates provided
  */
-function _getPixelsFromUVMap(img, uvmap) {
-	return uvmap.map(([u, v]) => _getPixelFromUV(img, u, v));
+function _getPixelsFromUVMap(img, uvmap: [u: number, v: number][][]) {
+	return uvmap.map((row) => row.map(([u, v]) => _getPixelFromUV(img, u, v))).flat();
 }
 
 export function uvMapFromDimensions(width, height) {
-	const uvmap = Array(width * height);
+	const uvmap = [];
 
 	const vWeight = range / height;
 	const uWeight = range / width;
 	const half = range / 2;
 
 	for (let v = 0; v < height; v++) {
-		const cursor = v * width;
-		for (let u = 0; u < height; u++) {
-			uvmap[cursor + u] = [u * uWeight - half, v * vWeight - half];
+		let row = [];
+		for (let u = 0; u < width; u++) {
+			row.push([u * uWeight - half, v * vWeight - half]);
 		}
+		uvmap.push(row);
 	}
-	return uvmap;
+	return uvmap as [u: number, v: number][][];
 }

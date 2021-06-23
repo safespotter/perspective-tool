@@ -1,32 +1,33 @@
-let worker = null;
+import { GPU } from 'gpu.js';
+let gpu: GPU = null;
 
-export function applyTransform(point: [u: number, v: number], transform: number[][]) {
-	const p = [...point, 1];
-	const tP = transform.map((row) => row.reduce((acc, _, i) => acc + row[i] * p[i], 0));
-	return tP;
-}
-
-export async function mapTransform(uvmap: [u: number, v: number][], transform: number[][]) {
-	if (!window.Worker || true) {
-		return new Promise((resolve: (data: number[][]) => void) => {
-			let res = uvmap.map((p) => applyTransform(p, transform));
-			res = res.map((arr) => {
-				const a = arr.map((n) => n / arr[3]);
-				return [a[0], a[1]];
-				// return a;
-			});
-			resolve(res);
-		});
-	} else {
-		if (!worker) {
-			worker = new Worker('src/lib/image/webworkers/transform.js');
-		}
-
-		return new Promise((resolve: (data: [u: number, v: number][]) => void) => {
-			worker.onmessage = (e) => resolve(e.data);
-			worker.postMessage([uvmap, transform]);
-		});
+export async function mapTransform(uvmap: [u: number, v: number][][], transform: number[][]) {
+	if (!gpu) {
+		gpu = new GPU();
 	}
+
+	const _mapTransform = gpu
+		.createKernel(function (uvmap: [u: number, v: number][][], transform: number[][]) {
+			const vec = [
+				uvmap[this.thread.y][this.thread.x][0],
+				uvmap[this.thread.y][this.thread.x][1],
+				1,
+			];
+			const res = [0, 0, 0, 0];
+			for (let i = 0; i < 4; i++) {
+				for (let j = 0; j < 3; j++) {
+					res[i] += vec[j] * transform[i][j];
+				}
+			}
+			return [res[0] / res[3], res[1] / res[3]];
+			// return res;
+		})
+		.setOutput([uvmap.length, uvmap[0].length]);
+
+	return new Promise((resolve: (data: [u: number, v: number][][]) => void) => {
+		const res = _mapTransform(uvmap, transform) as [u: number, v: number][][];
+		resolve(res);
+	});
 }
 
 export function rotationXAxis(radians: number) {
@@ -87,19 +88,18 @@ export function restoreProjection(
 	const [a, b, c, d] = plane;
 	const f = focusDistance;
 	const cf = c * f;
-	const cfd = cf - d;
 
 	/* prettier formats the matrix in a weird way, so here's a better version
 	 *
-	 *	[   cfd,      0,                0],
-	 *	[     0,    cfd,                0],
-	 *	[-f * a, -f * b, cf * f * (d + 1)],
-	 *	[     a,      b,               cf],
+	 *	[cf - d,      0,            0],
+	 *	[     0, cf - d,            0],
+	 *	[-f * a, -f * b, f * (cf - d)],
+	 *	[     a,      b,           cf],
 	 */
 	return [
-		[cfd, 0, 0],
-		[0, cfd, 0],
-		[-f * a, -f * b, f * cfd],
+		[cf - d, 0, 0],
+		[0, cf - d, 0],
+		[-f * a, -f * b, f * (cf - d)],
 		[a, b, cf],
 	];
 }
