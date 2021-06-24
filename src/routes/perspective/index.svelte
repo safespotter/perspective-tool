@@ -12,6 +12,8 @@
 		rotationXAxis,
 		translate,
 		restoreProjection,
+		translate2d,
+		scale2d,
 	} from '$lib/image/transform';
 	import { onMount } from 'svelte';
 
@@ -39,6 +41,8 @@
 
 	let focalLength = 1;
 
+	let zoom = 1;
+
 	$: cameraRotation = multiply(
 		rotationZAxis(Number(rotation.roll)),
 		multiply(rotationYAxis(Number(rotation.yaw)), rotationXAxis(Number(rotation.pitch)))
@@ -62,8 +66,10 @@
 
 	$: projection = restoreProjection(plane, focalLength);
 
-	$: transform = multiply(imageTransform, projection);
-	// $: transform = projection;
+	$: transform = multiply(
+		multiply(imageTransform, projection),
+		multiply(scale2d(zoom, zoom), translate2d(Number(translation.x), Number(translation.y)))
+	);
 
 	function computeOffsetAndDimensions(
 		view: { width: number; height: number },
@@ -99,8 +105,6 @@
 
 		cachedTransform = transform;
 		const transformedUvMap = await mapTransform(uvmap, transform);
-		// const transformedUvMap = uvmap;
-		// console.log({ planeOrigin, planeNormal, plane, imageTransform, uvmap, transformedUvMap });
 		const pixels = await getPixelsFromUVMap(originalImage, transformedUvMap);
 
 		for (let i = 0; i < image.width * image.height; i++) {
@@ -142,6 +146,8 @@
 		This webapp requires javascript
 	</canvas>
 
+	<label for="zoom">Zoom</label>
+	<input type="number" name="zoom" id="zoom" min=".1" max="10" step=".1" bind:value={zoom} />
 	<label for="focal">Focal length</label>
 	<input
 		type="number"

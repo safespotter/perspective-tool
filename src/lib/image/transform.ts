@@ -76,6 +76,14 @@ export function translate(x: number, y: number, z: number) {
 	];
 }
 
+export function translate2d(x: number, y: number) {
+	return [
+		[1, 0, x],
+		[0, 1, y],
+		[0, 0, 1],
+	];
+}
+
 export function scale(x: number, y: number, z: number) {
 	return [
 		[x, 0, 0, 0],
