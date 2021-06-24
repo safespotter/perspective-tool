@@ -34,7 +34,7 @@
 	let translation = {
 		x: 0,
 		y: 0,
-		z: 10,
+		z: 1,
 	};
 
 	let focalLength = 1;
@@ -44,32 +44,26 @@
 		multiply(rotationYAxis(Number(rotation.yaw)), rotationXAxis(Number(rotation.pitch)))
 	);
 
-	$: imageTransform = multiply(
-		translate(Number(translation.x), Number(translation.y), Number(translation.z)),
-		multiply(cameraRotation, translate(0, 0, Number(focalLength)))
-	);
+	$: imageTransform = multiply(translate(0, 0, Number(translation.z)), cameraRotation);
 
-	$: inverseImageTransform = inv(imageTransform);
-
-	$: planeOrigin = multiply(
-		inverseImageTransform,
-		transpose([translation.x, translation.y, 0, 1])
-	).flat();
-
+	$: planeOrigin = multiply(inv(imageTransform), transpose([0, 0, 0, 1])).flat();
 	$: planeNormal = multiply(inv(cameraRotation), transpose([0, 0, 1, 1])).flat();
 
 	$: plane = [
 		planeNormal[0],
 		planeNormal[1],
 		planeNormal[2],
-		planeNormal[0] * planeOrigin[0] +
+		-(
+			planeNormal[0] * planeOrigin[0] +
 			planeNormal[1] * planeOrigin[1] +
-			planeNormal[2] * planeOrigin[2],
-	];
+			planeNormal[2] * planeOrigin[2]
+		),
+	] as [a: number, b: number, c: number, d: number];
 
 	$: projection = restoreProjection(plane, focalLength);
 
-	$: transform = multiply(inverseImageTransform, projection);
+	$: transform = multiply(imageTransform, projection);
+	// $: transform = projection;
 
 	function computeOffsetAndDimensions(
 		view: { width: number; height: number },
@@ -105,6 +99,8 @@
 
 		cachedTransform = transform;
 		const transformedUvMap = await mapTransform(uvmap, transform);
+		// const transformedUvMap = uvmap;
+		// console.log({ planeOrigin, planeNormal, plane, imageTransform, uvmap, transformedUvMap });
 		const pixels = await getPixelsFromUVMap(originalImage, transformedUvMap);
 
 		for (let i = 0; i < image.width * image.height; i++) {

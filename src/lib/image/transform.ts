@@ -22,7 +22,8 @@ export async function mapTransform(uvmap: [u: number, v: number][][], transform:
 			if (res[3] === 0) {
 				res[3] = 0.000001;
 			}
-			return [res[0] / res[3], res[1] / res[3]];
+			// return [res[0] / res[3], res[1] / res[3]];
+			return [res[0] / res[3], res[1] / res[3], res[2] / res[3]];
 			// return res;
 		})
 		.setOutput([uvmap.length, uvmap[0].length]);
@@ -84,25 +85,24 @@ export function scale(x: number, y: number, z: number) {
 	];
 }
 
+export function scale2d(x: number, y: number) {
+	return [
+		[x, 0, 0],
+		[0, y, 0],
+		[0, 0, 1],
+	];
+}
+
 export function restoreProjection(
 	plane: [a: number, b: number, c: number, d: number],
 	focusDistance: number
 ) {
 	const [a, b, c, d] = plane;
 	const f = focusDistance;
-	const cf = c * f;
-
-	/* prettier formats the matrix in a weird way, so here's a better version
-	 *
-	 *	[cf - d,      0,            0],
-	 *	[     0, cf - d,            0],
-	 *	[-f * a, -f * b, f * (cf - d)],
-	 *	[     a,      b,           cf],
-	 */
 	return [
-		[cf - d, 0, 0],
-		[0, cf - d, 0],
-		[-f * a, -f * b, f * (cf - d)],
-		[a, b, cf],
+		[-c * f - d, 0, 0],
+		[0, -c * f - d, 0],
+		[f * a, f * b, d * f],
+		[a, b, -c * f],
 	];
 }
