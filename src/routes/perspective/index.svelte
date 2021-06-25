@@ -19,8 +19,7 @@
 	} from '$lib/image/transform';
 	import { onMount } from 'svelte';
 
-	const viewDim = 320;
-
+	let viewDim = 360;
 	let view: HTMLCanvasElement;
 	let handle: HTMLCanvasElement;
 
@@ -28,6 +27,16 @@
 	let cachedTransform: number[][] = null;
 	let image: ImageData = null;
 	let uvmap: [u: number, v: number][][];
+
+	$: {
+		if (view) {
+			view.width = viewDim;
+			view.height = viewDim;
+			image = view.getContext('2d').createImageData(view.width, view.height);
+			uvmap = uvMapFromDimensions(view.width, view.height);
+			cachedTransform = null;
+		}
+	}
 
 	let camera = {
 		height: 1,
@@ -141,8 +150,6 @@
 			handleCtx.putImageData(imageData, offset.u, offset.v);
 
 			originalImage = handleCtx.getImageData(0, 0, handle.width, handle.height);
-			image = view.getContext('2d').createImageData(view.width, view.height);
-			uvmap = uvMapFromDimensions(view.width, view.height);
 		} catch (e) {
 			return goto('/');
 		}
@@ -189,6 +196,16 @@
 			max="100"
 			step=".1"
 			bind:value={navigation.y}
+		/>
+		<label for="resolution">Resolution</label>
+		<input
+			type="number"
+			name="resolution"
+			id="resolution"
+			min="120"
+			max="600"
+			step="120"
+			bind:value={viewDim}
 		/>
 	</fieldset>
 	<fieldset>
