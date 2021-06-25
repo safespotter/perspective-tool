@@ -1,8 +1,10 @@
 import { GPU } from 'gpu.js';
+
 let gpu: GPU = null;
 
 export async function mapTransform2d(uvmap: [u: number, v: number][][], transform: number[][]) {
 	if (!gpu) {
+		console.log('gpu from import');
 		gpu = new GPU();
 	}
 
@@ -14,13 +16,15 @@ export async function mapTransform2d(uvmap: [u: number, v: number][][], transfor
 				1,
 			];
 			const res = [0, 0, 0, 0];
-			for (let i = 0; i < 3; i++) {
-				for (let j = 0; j < 3; j++) {
-					res[i] += vec[j] * transform[i][j];
-				}
+
+			//this thing can't handle nested loops when minified for some reason
+			for (let i = 0; i < 3 * 3; i++) {
+				res[i] += vec[0] * transform[i][0];
+				res[i] += vec[1] * transform[i][1];
+				res[i] += vec[2] * transform[i][2];
 			}
 			if (res[2] === 0) {
-				res[2] = 1e-30;
+				return [6.5e4, 6.5e4];
 			}
 			return [res[0] / res[2], res[1] / res[2]];
 		})
