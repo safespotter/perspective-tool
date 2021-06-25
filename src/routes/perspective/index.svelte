@@ -78,8 +78,8 @@
 	$: projectionTransform = multiply(tr3dTo2d(), multiply(imageTransform, projection));
 
 	$: navigationTransform = multiply(
-		zoom2d(navigation.zoom * navigation.zoom),
-		translate2d(Number(navigation.x), Number(-navigation.y))
+		translate2d(Number(navigation.x), Number(-navigation.y)),
+		zoom2d(navigation.zoom * navigation.zoom)
 	);
 
 	let transform = null;
