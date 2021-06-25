@@ -1,7 +1,7 @@
 import { GPU } from 'gpu.js';
 let gpu: GPU = null;
 
-export async function mapTransform(uvmap: [u: number, v: number][][], transform: number[][]) {
+export async function mapTransform2d(uvmap: [u: number, v: number][][], transform: number[][]) {
 	if (!gpu) {
 		gpu = new GPU();
 	}
@@ -14,16 +14,21 @@ export async function mapTransform(uvmap: [u: number, v: number][][], transform:
 				1,
 			];
 			const res = [0, 0, 0, 0];
-			for (let i = 0; i < 4; i++) {
+			for (let i = 0; i < 3; i++) {
 				for (let j = 0; j < 3; j++) {
 					res[i] += vec[j] * transform[i][j];
 				}
 			}
-			if (res[3] === 0) {
-				res[3] = 0.000001;
+			if (res[2] === 0) {
+				res[2] = 0.000001;
 			}
+			return [res[0] / res[2], res[1] / res[2]];
+
+			// if (res[3] === 0) {
+			// 	res[3] = 0.000001;
+			// }
 			// return [res[0] / res[3], res[1] / res[3]];
-			return [res[0] / res[3], res[1] / res[3], res[2] / res[3]];
+			// return [res[0] / res[3], res[1] / res[3], res[2] / res[3]];
 			// return res;
 		})
 		.setOutput([uvmap.length, uvmap[0].length]);
@@ -98,6 +103,26 @@ export function scale2d(x: number, y: number) {
 		[x, 0, 0],
 		[0, y, 0],
 		[0, 0, 1],
+	];
+}
+
+export function zoom2d(s: number) {
+	return [
+		[1, 0, 0],
+		[0, 1, 0],
+		[0, 0, s],
+	];
+}
+
+export function tr2dTo3d(zEquation: [A: number, B: number, C: number] = [0, 0, 0]) {
+	return [[1, 0, 0], [0, 1, 0], [...zEquation], [0, 0, 1]];
+}
+
+export function tr3dTo2d() {
+	return [
+		[1, 0, 0, 0],
+		[0, 1, 0, 0],
+		[0, 0, 0, 1],
 	];
 }
 

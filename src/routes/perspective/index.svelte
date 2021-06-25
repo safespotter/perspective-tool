@@ -6,14 +6,16 @@
 	import { session } from '$app/stores';
 	import { uvMapFromDimensions, getPixelsFromUVMap } from '$lib/image/manipulation';
 	import {
-		mapTransform,
+		mapTransform2d,
 		rotationZAxis,
 		rotationYAxis,
 		rotationXAxis,
 		translate,
 		restoreProjection,
 		translate2d,
-		scale2d,
+		zoom2d,
+		tr2dTo3d,
+		tr3dTo2d,
 	} from '$lib/image/transform';
 	import { onMount } from 'svelte';
 
@@ -65,11 +67,14 @@
 	] as [a: number, b: number, c: number, d: number];
 
 	$: projection = restoreProjection(plane, focalLength);
+	$: projectionTransform = multiply(tr3dTo2d(), multiply(imageTransform, projection));
 
-	$: transform = multiply(
-		multiply(imageTransform, projection),
-		multiply(scale2d(zoom, zoom), translate2d(Number(translation.x), Number(translation.y)))
+	$: navigationTransform = multiply(
+		zoom2d(zoom * zoom),
+		translate2d(Number(translation.x), Number(-translation.y))
 	);
+
+	$: transform = multiply(inv(projectionTransform), navigationTransform);
 
 	function computeOffsetAndDimensions(
 		view: { width: number; height: number },
@@ -104,7 +109,7 @@
 		}
 
 		cachedTransform = transform;
-		const transformedUvMap = await mapTransform(uvmap, transform);
+		const transformedUvMap = await mapTransform2d(uvmap, transform);
 		const pixels = await getPixelsFromUVMap(originalImage, transformedUvMap);
 
 		for (let i = 0; i < image.width * image.height; i++) {
