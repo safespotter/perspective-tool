@@ -1,6 +1,6 @@
 <script lang="ts">
+	import { base } from '$app/paths';
 	import { goto } from '$app/navigation';
-
 	import { session } from '$app/stores';
 
 	let loader: HTMLCanvasElement;
@@ -29,20 +29,8 @@
 		const ctx = loader.getContext('2d');
 		ctx.drawImage(image, 0, 0);
 		const imageData = ctx.getImageData(0, 0, loader.width, loader.height);
-		// const numOfChunks = Math.floor(imageData.data.length / 4);
-		// const chunks: Uint8ClampedArray[] = [];
-		// for (let i = 0; i < numOfChunks; i++) {
-		// 	if (i % 4 !== 0) continue;
-
-		// 	const index = i / 4;
-		// 	const chunk = imageData.data.slice(index, index + 4);
-		// 	chunks.push(i);
-		// }
-
-		// session.set({ imgPixels: chunks });
-		// session.set({ imageData });
 		$session = { ...session, imageData: imageData };
-		goto('/perspective');
+		goto(`${base}/perspective`);
 	}
 </script>
 

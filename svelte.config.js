@@ -1,4 +1,5 @@
 import preprocess from 'svelte-preprocess';
+import adapterStatic from '@sveltejs/adapter-static';
 
 /** @type {import('@sveltejs/kit').Config} */
 const config = {
@@ -8,8 +9,13 @@ const config = {
 
 	kit: {
 		// hydrate the <div id="svelte"> element in src/app.html
-		target: '#svelte'
-	}
+		target: '#svelte',
+		adapter: adapterStatic(),
+		// paths: {
+		// 	base: '/safespotter_toolv2',
+		// 	assets: '/safespotter_toolv2',
+		// },
+	},
 };
 
 export default config;

@@ -1,9 +1,10 @@
 <script lang="ts">
+	import { base } from '$app/paths';
+	import { goto } from '$app/navigation';
+	import { session } from '$app/stores';
+
 	import { add, multiply, inv, transpose } from 'mathjs';
 
-	import { goto } from '$app/navigation';
-
-	import { session } from '$app/stores';
 	import { uvMapFromDimensions, getPixelsFromUVMap } from '$lib/image/manipulation';
 	import {
 		mapTransform2d,
@@ -151,7 +152,7 @@
 
 			originalImage = handleCtx.getImageData(0, 0, handle.width, handle.height);
 		} catch (e) {
-			return goto('/');
+			return goto(`${base}/`);
 		}
 
 		setTimeout(drawLoop);
@@ -265,7 +266,7 @@
 			bind:value={camera.roll}
 		/>
 	</fieldset>
-	<a href="/" class="btn">Back</a>
+	<a href="{base}/" class="btn">Back</a>
 </main>
 
 <canvas hidden bind:this={handle} />
