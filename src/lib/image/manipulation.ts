@@ -12,7 +12,8 @@ export async function getPixelsFromUVMap(img: ImageData, uvmap: [u: number, v: n
 			resolve(_getPixelsFromUVMap(img, uvmap))
 		);
 	} else {
-		// memory explodes here because we are copying the image on every call. Gotta check on how to use transferables properly
+		// memory explodes here because we are copying the image on every call.
+		// Gotta check on how to use transferables properly before re-enabling it.
 		if (!worker) {
 			worker = new Worker('src/lib/image/workers/manipulation.js');
 		}

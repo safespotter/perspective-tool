@@ -19,7 +19,7 @@ main {
 	display: flex;
 	flex-direction: column;
 	width: min(80ch, 100%);
-	margin: 0 auto;
+	margin: 1em auto 0;
 }
 
 .btn {

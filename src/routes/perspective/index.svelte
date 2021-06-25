@@ -29,28 +29,26 @@
 	let image: ImageData = null;
 	let uvmap: [u: number, v: number][][];
 
-	let rotation = {
+	let camera = {
+		height: 1,
+		focal: 1,
 		pitch: 0,
 		yaw: 0,
 		roll: 0,
 	};
 
-	let translation = {
+	let navigation = {
 		x: 0,
 		y: 0,
-		z: 1,
+		zoom: 0.75,
 	};
 
-	let focalLength = 1;
-
-	let zoom = 1;
-
 	$: cameraRotation = multiply(
-		rotationZAxis(Number(rotation.roll)),
-		multiply(rotationYAxis(Number(rotation.yaw)), rotationXAxis(Number(rotation.pitch)))
+		rotationZAxis(Number(camera.roll)),
+		multiply(rotationYAxis(Number(camera.yaw)), rotationXAxis(Number(camera.pitch)))
 	);
 
-	$: imageTransform = multiply(translate(0, 0, Number(translation.z)), cameraRotation);
+	$: imageTransform = multiply(translate(0, 0, Number(camera.height)), cameraRotation);
 
 	$: planeOrigin = multiply(inv(imageTransform), transpose([0, 0, 0, 1])).flat();
 	$: planeNormal = multiply(inv(cameraRotation), transpose([0, 0, 1, 1])).flat();
@@ -66,15 +64,22 @@
 		),
 	] as [a: number, b: number, c: number, d: number];
 
-	$: projection = restoreProjection(plane, focalLength);
+	$: projection = restoreProjection(plane, camera.focal);
 	$: projectionTransform = multiply(tr3dTo2d(), multiply(imageTransform, projection));
 
 	$: navigationTransform = multiply(
-		zoom2d(zoom * zoom),
-		translate2d(Number(translation.x), Number(-translation.y))
+		zoom2d(navigation.zoom * navigation.zoom),
+		translate2d(Number(navigation.x), Number(-navigation.y))
 	);
 
-	$: transform = multiply(inv(projectionTransform), navigationTransform);
+	let transform = null;
+	$: {
+		try {
+			transform = multiply(inv(projectionTransform), navigationTransform);
+		} catch {
+			transform = null;
+		}
+	}
 
 	function computeOffsetAndDimensions(
 		view: { width: number; height: number },
@@ -103,7 +108,7 @@
 	}
 
 	async function drawLoop() {
-		if (transform === cachedTransform) {
+		if (transform === null || transform === cachedTransform) {
 			setTimeout(drawLoop);
 			return;
 		}
@@ -151,74 +156,96 @@
 		This webapp requires javascript
 	</canvas>
 
-	<label for="zoom">Zoom</label>
-	<input type="number" name="zoom" id="zoom" min=".1" max="10" step=".1" bind:value={zoom} />
-	<label for="focal">Focal length</label>
-	<input
-		type="number"
-		name="focal"
-		id="focal"
-		min=".1"
-		max="10"
-		step=".1"
-		bind:value={focalLength}
-	/>
 	<fieldset>
-		<legend>Camera Position</legend>
-		<label for="x">X</label>
+		<legend>Navigation</legend>
+		<label for="navigation-zoom">Zoom</label>
 		<input
 			type="number"
-			name="x"
-			id="x"
-			min="-100"
-			max="100"
+			name="navigation-zoom"
+			id="navigation-zoom"
+			min=".1"
+			max="10"
 			step=".1"
-			bind:value={translation.x}
+			bind:value={navigation.zoom}
 		/>
-		<label for="y">Y</label>
+
+		<label for="navigation-x">X</label>
 		<input
 			type="number"
-			name="y"
-			id="y"
+			name="navigation-x"
+			id="navigation-x"
 			min="-100"
 			max="100"
 			step=".1"
-			bind:value={translation.y}
+			bind:value={navigation.x}
 		/>
-		<label for="z">Z</label>
+
+		<label for="navigation-y">Y</label>
 		<input
 			type="number"
-			name="z"
-			id="x"
+			name="navigation-y"
+			id="navigation-y"
 			min="-100"
 			max="100"
 			step=".1"
-			bind:value={translation.z}
+			bind:value={navigation.y}
 		/>
 	</fieldset>
 	<fieldset>
-		<legend>Camera Rotation</legend>
-		<label for="x">X</label>
+		<legend>Camera</legend>
+		<label for="focal">Focal length</label>
 		<input
 			type="number"
-			name="x"
-			id="x"
-			min="-100"
-			max="100"
+			name="focal"
+			id="focal"
+			min=".1"
+			max="10"
 			step=".1"
-			bind:value={rotation.pitch}
+			bind:value={camera.focal}
 		/>
-		<label for="y">Y</label>
-		<input type="number" name="y" id="y" min="-100" max="100" step=".1" bind:value={rotation.yaw} />
-		<label for="z">Z</label>
+
+		<label for="height">Height</label>
 		<input
 			type="number"
-			name="z"
-			id="x"
+			name="height"
+			id="height"
 			min="-100"
 			max="100"
 			step=".1"
-			bind:value={rotation.roll}
+			bind:value={camera.height}
+		/>
+		<hr />
+		<label for="pitch">Pitch</label>
+		<input
+			type="number"
+			name="pitch"
+			id="pitch"
+			min="-100"
+			max="100"
+			step=".1"
+			bind:value={camera.pitch}
+		/>
+
+		<label for="yaw">Yaw</label>
+		<input
+			type="number"
+			name="yaw"
+			id="yaw"
+			min="-100"
+			max="100"
+			step=".1"
+			bind:value={camera.yaw}
+		/>
+
+		<label for="roll">Roll</label>
+		<input
+			type="number"
+			name="roll"
+			id="roll"
+			min="-100"
+			max="100"
+			step=".1"
+			bind:value={camera.roll}
 		/>
 	</fieldset>
 	<a href="/" class="btn">Back</a>
@@ -232,5 +259,9 @@
 	}
 	.btn {
 		margin: 1em auto;
+	}
+
+	label + * + label {
+		margin-left: 1.5ch;
 	}
 </style>

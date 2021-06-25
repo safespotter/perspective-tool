@@ -20,16 +20,9 @@ export async function mapTransform2d(uvmap: [u: number, v: number][][], transfor
 				}
 			}
 			if (res[2] === 0) {
-				res[2] = 0.000001;
+				res[2] = 1e-30;
 			}
 			return [res[0] / res[2], res[1] / res[2]];
-
-			// if (res[3] === 0) {
-			// 	res[3] = 0.000001;
-			// }
-			// return [res[0] / res[3], res[1] / res[3]];
-			// return [res[0] / res[3], res[1] / res[3], res[2] / res[3]];
-			// return res;
 		})
 		.setOutput([uvmap.length, uvmap[0].length]);
 
