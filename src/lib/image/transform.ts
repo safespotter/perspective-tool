@@ -125,14 +125,25 @@ export function tr3dTo2d() {
 
 export function restoreProjection(
 	plane: [a: number, b: number, c: number, d: number],
-	focusDistance: number
+	focalLength: number
 ) {
 	const [a, b, c, d] = plane;
-	const f = focusDistance;
+	const f = focalLength;
 	return [
 		[-c * f - d, 0, 0],
 		[0, -c * f - d, 0],
 		[f * a, f * b, d * f],
 		[a, b, -c * f],
 	];
+}
+
+export function inverseScaleForVerticalProjection(
+	plane: [a: number, b: number, c: number, d: number],
+	focalLength: number
+) {
+	const [a, b, c, d] = plane;
+	const f = focalLength;
+
+	const lambda = d + c * f;
+	return [a / lambda, b / lambda, (c * f) / lambda];
 }

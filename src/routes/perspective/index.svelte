@@ -3,7 +3,7 @@
 	import { goto } from '$app/navigation';
 	import { session } from '$app/stores';
 
-	import { add, multiply, inv, transpose } from 'mathjs';
+	import { multiply, inv, transpose} from 'mathjs';
 
 	import { uvMapFromDimensions, getPixelsFromUVMap } from '$lib/image/manipulation';
 	import {
@@ -15,14 +15,15 @@
 		restoreProjection,
 		translate2d,
 		zoom2d,
-		tr2dTo3d,
 		tr3dTo2d,
+		inverseScaleForVerticalProjection,
 	} from '$lib/image/transform';
 	import { onMount } from 'svelte';
 
 	let viewDim = 360;
 	let view: HTMLCanvasElement;
 	let handle: HTMLCanvasElement;
+	let downloader: HTMLAnchorElement;
 
 	let originalImage: ImageData = null;
 	let cachedTransform: number[][] = null;
@@ -136,6 +137,22 @@
 		view.getContext('2d').putImageData(image, 0, 0);
 
 		setTimeout(drawLoop);
+	}
+
+	function download() {
+		const data = {
+			projection: projectionTransform,
+			inverseScale: inverseScaleForVerticalProjection(plane, camera.focal)
+		}
+
+		const blob = new Blob([JSON.stringify(data, null, 2)], {type: 'application.json'})
+		const url = URL.createObjectURL(blob)
+
+		downloader.href = url;
+		downloader.download = `${+Date.now()}.json`
+		downloader.click()
+
+		URL.revokeObjectURL(url)
 	}
 
 	onMount(() => {
@@ -266,10 +283,12 @@
 			bind:value={camera.roll}
 		/>
 	</fieldset>
+	<button class="btn" on:click={download}>Save transform</button>
 	<a href="{base}/" class="btn">Back</a>
 </main>
 
 <canvas hidden bind:this={handle} />
+<a hidden href="" download="" bind:this={downloader}>hidden</a>
 
 <style>
 	.viewer {
