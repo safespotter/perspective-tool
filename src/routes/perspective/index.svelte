@@ -83,7 +83,6 @@
 			projectionTransformNotTranslated,
 			transpose([navigation.x, -navigation.y, 1])
 		);
-		console.log(translated_pointer);
 		const translation = translate2d(
 			translated_pointer[0] / translated_pointer[2],
 			translated_pointer[1] / translated_pointer[2]
@@ -296,7 +295,7 @@
 </main>
 
 <canvas hidden bind:this={handle} />
-<a hidden href="" download="" bind:this={downloader}>hidden</a>
+<a hidden href="." download="" bind:this={downloader}>hidden</a>
 
 <style>
 	.viewer {
