@@ -3,7 +3,7 @@
 	import { goto } from '$app/navigation';
 	import { session } from '$app/stores';
 
-	import { multiply, inv, transpose} from 'mathjs';
+	import { multiply, inv, transpose } from 'mathjs';
 
 	import { uvMapFromDimensions, getPixelsFromUVMap } from '$lib/image/manipulation';
 	import {
@@ -76,17 +76,25 @@
 	] as [a: number, b: number, c: number, d: number];
 
 	$: projection = restoreProjection(plane, camera.focal);
-	$: projectionTransform = multiply(tr3dTo2d(), multiply(imageTransform, projection));
-
-	$: navigationTransform = multiply(
-		translate2d(Number(navigation.x), Number(-navigation.y)),
-		zoom2d(navigation.zoom * navigation.zoom)
-	);
+	$: projectionTransformNotTranslated = multiply(tr3dTo2d(), multiply(imageTransform, projection));
+	let projectionTransform;
+	$: {
+		const translated_pointer: number[] = multiply(
+			projectionTransformNotTranslated,
+			transpose([navigation.x, -navigation.y, 1])
+		);
+		console.log(translated_pointer);
+		const translation = translate2d(
+			translated_pointer[0] / translated_pointer[2],
+			translated_pointer[1] / translated_pointer[2]
+		);
+		projectionTransform = multiply(inv(translation), projectionTransformNotTranslated);
+	}
 
 	let transform = null;
 	$: {
 		try {
-			transform = multiply(inv(projectionTransform), navigationTransform);
+			transform = multiply(inv(projectionTransform), zoom2d(navigation.zoom * navigation.zoom));
 		} catch {
 			transform = null;
 		}
@@ -142,17 +150,17 @@
 	function download() {
 		const data = {
 			projection: projectionTransform,
-			inverseScale: inverseScaleForVerticalProjection(plane, camera.focal)
-		}
+			inverseScale: inverseScaleForVerticalProjection(plane, camera.focal),
+		};
 
-		const blob = new Blob([JSON.stringify(data, null, 2)], {type: 'application.json'})
-		const url = URL.createObjectURL(blob)
+		const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application.json' });
+		const url = URL.createObjectURL(blob);
 
 		downloader.href = url;
-		downloader.download = `${+Date.now()}.json`
-		downloader.click()
+		downloader.download = `${+Date.now()}.json`;
+		downloader.click();
 
-		URL.revokeObjectURL(url)
+		URL.revokeObjectURL(url);
 	}
 
 	onMount(() => {
