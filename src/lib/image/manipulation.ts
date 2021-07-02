@@ -1,5 +1,5 @@
 let worker: Worker = null;
-const range = 2;
+const range = 1;
 
 /**
  * @param img original image that we want to get the pixels from
