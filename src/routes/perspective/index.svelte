@@ -20,23 +20,33 @@
 	} from '$lib/image/transform';
 	import { onMount } from 'svelte';
 
-	let viewDim = 360;
+	let resolution = 360;
+	let transformer: HTMLCanvasElement;
 	let view: HTMLCanvasElement;
 	let handle: HTMLCanvasElement;
+	let grid: HTMLCanvasElement;
 	let downloader: HTMLAnchorElement;
 
+	let showGrid = true;
 	let originalImage: ImageData = null;
 	let cachedTransform: number[][] = null;
 	let image: ImageData = null;
 	let uvmap: [u: number, v: number][][];
 
 	$: {
-		if (view) {
-			view.width = viewDim;
-			view.height = viewDim;
-			image = view.getContext('2d').createImageData(view.width, view.height);
-			uvmap = uvMapFromDimensions(view.width, view.height);
+		if (transformer) {
+			transformer.width = resolution;
+			transformer.height = resolution;
+			image = transformer.getContext('2d').createImageData(transformer.width, transformer.height);
+			uvmap = uvMapFromDimensions(transformer.width, transformer.height);
 			cachedTransform = null;
+		}
+	}
+
+	$: {
+		if (grid) {
+			grid.width = resolution;
+			grid.height = resolution;
 		}
 	}
 
@@ -125,9 +135,54 @@
 		};
 	}
 
-	async function drawLoop() {
-		if (transform === null || transform === cachedTransform) {
-			setTimeout(drawLoop);
+	$: drawGrid(grid?.getContext('2d'), resolution, resolution, navigation.zoom * navigation.zoom);
+
+	async function drawGrid(
+		ctx: CanvasRenderingContext2D,
+		width: number,
+		height: number,
+		zoom: number
+	) {
+		if (!ctx) {
+			return;
+		}
+
+		ctx.strokeStyle = '#fff';
+		ctx.lineWidth = 1;
+		const centerX = width / 2;
+		const centerY = height / 2;
+
+		ctx.clearRect(0, 0, width, height);
+
+		ctx.beginPath();
+		for (let i = 0; i * 2 < width / zoom; i++) {
+			const x = i * width * zoom;
+			ctx.moveTo(centerX + x, 0);
+			ctx.lineTo(centerX + x, height);
+
+			ctx.moveTo(centerX - x, 0);
+			ctx.lineTo(centerX - x, height);
+		}
+		for (let i = 0; i * 2 < height / zoom; i++) {
+			const y = i * height * zoom;
+			ctx.moveTo(0, centerY + y);
+			ctx.lineTo(width, centerY + y);
+
+			ctx.moveTo(0, centerY - y);
+			ctx.lineTo(width, centerY - y);
+		}
+		ctx.stroke();
+	}
+
+	async function transformerLoop() {
+		if (transform === null) {
+			transformer.getContext('2d').clearRect(0, 0, resolution, resolution);
+			setTimeout(transformerLoop);
+			return;
+		}
+
+		if (transform === cachedTransform) {
+			setTimeout(transformerLoop);
 			return;
 		}
 
@@ -141,9 +196,8 @@
 			image.data[i * 4 + 2] = pixels[i][2];
 			image.data[i * 4 + 3] = pixels[i][3];
 		}
-		view.getContext('2d').putImageData(image, 0, 0);
-
-		setTimeout(drawLoop);
+		transformer.getContext('2d').putImageData(image, 0, 0);
+		setTimeout(transformerLoop);
 	}
 
 	function download() {
@@ -160,6 +214,22 @@
 		downloader.click();
 
 		URL.revokeObjectURL(url);
+	}
+
+	function drawLoop() {
+		if (!view) {
+			requestAnimationFrame(drawLoop);
+			return;
+		}
+
+		view.width = view.clientWidth;
+		view.height = view.clientWidth;
+
+		const ctx = view.getContext('2d');
+		ctx.clearRect(0, 0, view.width, view.height);
+		ctx.drawImage(transformer, 0, 0, view.width, view.height);
+		if (showGrid) ctx.drawImage(grid, 0, 0, view.width, view.height);
+		requestAnimationFrame(drawLoop);
 	}
 
 	onMount(() => {
@@ -179,14 +249,13 @@
 			return goto(`${base}/`);
 		}
 
-		setTimeout(drawLoop);
+		setTimeout(transformerLoop);
+		requestAnimationFrame(drawLoop);
 	});
 </script>
 
 <main>
-	<canvas class="viewer" bind:this={view} width={viewDim} height={viewDim}>
-		This webapp requires javascript
-	</canvas>
+	<canvas class="viewer" bind:this={view}> This webapp requires javascript </canvas>
 
 	<fieldset>
 		<legend>Navigation</legend>
@@ -230,8 +299,11 @@
 			min="120"
 			max="600"
 			step="120"
-			bind:value={viewDim}
+			bind:value={resolution}
 		/>
+
+		<label for="toggle-grid">Toggle grid</label>
+		<input type="checkbox" bind:checked={showGrid} />
 	</fieldset>
 	<fieldset>
 		<legend>Camera</legend>
@@ -295,11 +367,14 @@
 </main>
 
 <canvas hidden bind:this={handle} />
+<canvas hidden bind:this={transformer} width={resolution} height={resolution} />
+<canvas hidden bind:this={grid} />
 <a hidden href="." download="" bind:this={downloader}>hidden</a>
 
 <style>
 	.viewer {
 		border: 1px solid black;
+		width: 100%;
 	}
 	.btn {
 		margin: 1em auto;
