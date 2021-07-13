@@ -23,7 +23,6 @@
 	let resolution = 360;
 	let transformer: HTMLCanvasElement;
 	let view: HTMLCanvasElement;
-	let handle: HTMLCanvasElement;
 	let grid: HTMLCanvasElement;
 	let downloader: HTMLAnchorElement;
 
@@ -109,31 +108,7 @@
 		}
 	}
 
-	function computeOffsetAndDimensions(
-		view: { width: number; height: number },
-		image: { width: number; height: number }
-	) {
-		const ratio = image.width / image.height;
-		let viewWidth = view.width;
-		let viewHeight = view.width / ratio;
-
-		if (image.width < image.height) {
-			viewWidth *= ratio;
-			viewHeight *= ratio;
-		}
-
-		const offset = [(view.width - viewWidth) / 2, (view.height - viewHeight) / 2];
-		return {
-			offset: {
-				u: offset[0],
-				v: offset[1],
-			},
-			dimensions: {
-				width: viewWidth,
-				height: viewHeight,
-			},
-		};
-	}
+	let transformedUvMap;
 
 	$: drawGrid(grid?.getContext('2d'), resolution, resolution, navigation.zoom * navigation.zoom);
 
@@ -187,7 +162,7 @@
 		}
 
 		cachedTransform = transform;
-		const transformedUvMap = await mapTransform2d(uvmap, transform);
+		transformedUvMap = await mapTransform2d(uvmap, transform);
 		const pixels = await getPixelsFromUVMap(originalImage, transformedUvMap);
 
 		for (let i = 0; i < image.width * image.height; i++) {
@@ -234,17 +209,7 @@
 
 	onMount(() => {
 		try {
-			const imageData: ImageData = $session.imageData;
-			const handleCtx = handle.getContext('2d');
-
-			const handleDim = Math.max(imageData.width, imageData.height);
-			handle.width = handleDim;
-			handle.height = handleDim;
-
-			const { offset, dimensions } = computeOffsetAndDimensions(handle, imageData);
-			handleCtx.putImageData(imageData, offset.u, offset.v);
-
-			originalImage = handleCtx.getImageData(0, 0, handle.width, handle.height);
+			originalImage = $session.imageData;
 		} catch (e) {
 			return goto(`${base}/`);
 		}
@@ -366,7 +331,6 @@
 	<a href="{base}/" class="btn">Back</a>
 </main>
 
-<canvas hidden bind:this={handle} />
 <canvas hidden bind:this={transformer} width={resolution} height={resolution} />
 <canvas hidden bind:this={grid} />
 <a hidden href="." download="" bind:this={downloader}>hidden</a>

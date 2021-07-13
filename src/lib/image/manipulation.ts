@@ -1,4 +1,6 @@
-let worker: Worker = null;
+import { scale2d, translate2d } from './transform';
+import { multiply } from 'mathjs';
+
 const range = 1;
 
 /**
@@ -7,24 +9,9 @@ const range = 1;
  * @returns list of [r,g,b,a] (0:255) pixels on the coordinates provided
  */
 export async function getPixelsFromUVMap(img: ImageData, uvmap: [u: number, v: number][][]) {
-	if (!window.Worker || true) {
-		return new Promise((resolve: (data: [r: number, g: number, b: number, a: number][]) => void) =>
-			resolve(_getPixelsFromUVMap(img, uvmap))
-		);
-	} else {
-		// memory explodes here because we are copying the image on every call.
-		// Gotta check on how to use transferables properly before re-enabling it.
-		if (!worker) {
-			worker = new Worker('src/lib/image/workers/manipulation.js');
-		}
-
-		return new Promise(
-			(resolve: (data: [r: number, g: number, b: number, a: number][]) => void) => {
-				worker.onmessage = (e) => resolve(e.data);
-				worker.postMessage([img, uvmap, range]);
-			}
-		);
-	}
+	return new Promise((resolve: (data: [r: number, g: number, b: number, a: number][]) => void) =>
+		resolve(_getPixelsFromUVMap(img, uvmap))
+	);
 }
 
 /**
@@ -35,14 +22,10 @@ export async function getPixelsFromUVMap(img: ImageData, uvmap: [u: number, v: n
  * @param v range 0:1
  */
 function _getPixelFromUV(img, u, v): [r: number, g: number, b: number, a: number] {
-	const vWeight = img.height / range;
-	const uWeight = img.width / range;
-	const half = range / 2;
+	if (u < 0 || v < 0 || u > img.width || v > img.height) return [0, 0, 0, 0];
 
-	if (u >= half || v >= half || u < -half || v < -half) return [0, 0, 0, 0];
-
-	const imgU = Math.floor((u + half) * uWeight);
-	const imgV = Math.floor((v + half) * vWeight);
+	const imgU = Math.floor(u);
+	const imgV = Math.floor(v);
 
 	const i = (img.width * imgV + imgU) * 4;
 
@@ -57,20 +40,34 @@ function _getPixelFromUV(img, u, v): [r: number, g: number, b: number, a: number
  * @returns list of [r,g,b,a] (0:255) pixels on the coordinates provided
  */
 function _getPixelsFromUVMap(img, uvmap: [u: number, v: number][][]) {
-	return uvmap.map((row) => row.map(([u, v]) => _getPixelFromUV(img, u, v))).flat();
+	const halfW = img.width / 2;
+	const halfH = img.height / 2;
+	const transform = multiply(translate2d(halfW, halfH), scale2d(img.height, img.height));
+
+	return uvmap
+		.map((row) =>
+			row.map(([u, v]) => {
+				const tuv = multiply(transform, [u, v, 1]);
+				return _getPixelFromUV(img, tuv[0], tuv[1]);
+			})
+		)
+		.flat();
 }
 
 export function uvMapFromDimensions(width, height) {
 	const uvmap = [];
 
-	const vWeight = range / height;
-	const uWeight = range / width;
-	const half = range / 2;
+	const scale = scale2d(1 / height, 1 / height);
+	const halfW = width / height / 2;
+	const translation = translate2d(-halfW, -0.5);
+	const transform = multiply(translation, scale);
 
 	for (let v = 0; v < height; v++) {
 		let row = [];
 		for (let u = 0; u < width; u++) {
-			row.push([u * uWeight - half, v * vWeight - half]);
+			const coords = [u, v, 1];
+			const tcoords = multiply(transform, coords);
+			row.push([tcoords[0], tcoords[1]]);
 		}
 		uvmap.push(row);
 	}
