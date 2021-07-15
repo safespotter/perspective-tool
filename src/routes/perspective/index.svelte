@@ -42,13 +42,6 @@
 		}
 	}
 
-	$: {
-		if (grid) {
-			grid.width = resolution;
-			grid.height = resolution;
-		}
-	}
-
 	let camera = {
 		height: 1,
 		focal: 1,
@@ -110,18 +103,17 @@
 
 	let transformedUvMap;
 
-	$: drawGrid(grid?.getContext('2d'), resolution, resolution, navigation.zoom * navigation.zoom);
+	$: drawGrid(grid, view?.width, view?.height, navigation.zoom * navigation.zoom);
 
-	async function drawGrid(
-		ctx: CanvasRenderingContext2D,
-		width: number,
-		height: number,
-		zoom: number
-	) {
-		if (!ctx) {
+	async function drawGrid(grid: HTMLCanvasElement, width: number, height: number, zoom: number) {
+		if (!grid || !width || !height) {
 			return;
 		}
 
+		grid.width = width;
+		grid.height = height;
+
+		const ctx = grid.getContext('2d');
 		ctx.strokeStyle = '#fff';
 		ctx.lineWidth = 1;
 		const centerX = width / 2;
