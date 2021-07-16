@@ -23,7 +23,6 @@
 
 	function loadImage(image: HTMLImageElement) {
 		$session = { ...session, image: image };
-		console.log(image, session);
 		goto(`${base}/perspective`);
 	}
 </script>

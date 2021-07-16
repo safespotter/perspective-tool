@@ -1,4 +1,4 @@
-import { GPU, KernelOutput } from 'gpu.js';
+import { GPU, KernelFunction, KernelOutput } from 'gpu.js';
 import { multiply, inv } from 'mathjs';
 
 let gpu = new GPU();
@@ -30,8 +30,10 @@ export function createTransformHandle(
 	const texTsfNormal = multiply(translate2d(-texW / texH / 2, 0.5), scale2d(1 / texH, -1 / texH));
 
 	function newKernel(dim) {
+		// the minifier breaks this kernel, so pass the function as a string
 		const kernel = gpu
-			.createKernel(function (texture, transform) {
+			.createKernel(
+				(`function (texture, transform) {
 				const v = [this.thread.x, this.thread.y, 1];
 				const tv = [0, 0, 0];
 
@@ -44,18 +46,19 @@ export function createTransformHandle(
 				if (tv[2] === 0) {
 					this.color(0, 0, 0, 0);
 				} else {
-					const p = [Math.floor(tv[0] / tv[2]), Math.floor(tv[1] / tv[2])];
+					const x = Math.floor(tv[0] / tv[2]);
+					const y = Math.floor(tv[1] / tv[2]);
 
-					if (p[1] < 0 || p[1] > this.constants.texH || p[0] < 0 || p[0] > this.constants.texW) {
+					if (y < 0 || y > this.constants.texH || x < 0 || x > this.constants.texW) {
 						this.color(0, 0, 0, 0);
 					} else {
-						const pixel = texture[p[1]][p[0]];
+						const pixel = texture[y][x];
 						this.color(pixel[0], pixel[1], pixel[2], pixel[3]);
 					}
 				}
-			})
+			}` as unknown) as KernelFunction
+			)
 			.setConstants({ texW, texH })
-			.setDynamicOutput(true)
 			.setOutput([dim, dim])
 			.setGraphical(true);
 
@@ -63,7 +66,7 @@ export function createTransformHandle(
 	}
 
 	let kernel = newKernel(dimension);
-	// no idea why but without this the dimension is wrong
+	// no idea why but without destroying it once the dimension is wrong
 	kernel.destroy(true);
 	kernel = newKernel(dimension);
 
