@@ -1,39 +1,85 @@
-import { GPU } from 'gpu.js';
+import { GPU, KernelOutput } from 'gpu.js';
+import { multiply, inv, e } from 'mathjs';
 
-let gpu: GPU = null;
+let gpu = new GPU();
 
-export async function mapTransform2d(uvmap: [u: number, v: number][][], transform: number[][]) {
-	if (!gpu) {
-		console.log('gpu from import');
-		gpu = new GPU();
+function loadImage(image: HTMLImageElement | HTMLVideoElement) {
+	const load = gpu
+		.createKernel(function (input) {
+			return input[this.thread.y][this.thread.x];
+		})
+		.setOutput([image.width, image.height])
+		.setPipeline(true);
+
+	return load(image);
+}
+
+export type TransformHandle = {
+	canvas: HTMLCanvasElement;
+	apply: (transform: any) => KernelOutput;
+};
+
+export function createTransformHandle(
+	dimension,
+	originalImage: HTMLImageElement | HTMLVideoElement
+): TransformHandle {
+	const texture = loadImage(originalImage);
+
+	const texH = originalImage.height;
+	const texW = originalImage.width;
+	const texTsfNormal = multiply(translate2d(-texW / texH / 2, -0.5), scale2d(1 / texH, 1 / texH));
+
+	function newKernel(dim) {
+		const kernel = gpu
+			.createKernel(function (texture, transform) {
+				const v = [this.thread.x, this.thread.y, 1];
+				const tv = [0, 0, 0];
+
+				for (let i = 0; i < 3; i++) {
+					tv[i] += transform[i][0] * v[0];
+					tv[i] += transform[i][1] * v[1];
+					tv[i] += transform[i][2] * v[2];
+				}
+
+				if (tv[2] == 0) {
+					this.color(0, 0, 0, 0);
+				} else {
+					const p = [Math.floor(tv[0] / tv[2]), Math.floor(tv[1] / tv[2])];
+
+					if (p[0] < 0 || p[0] > this.constants.texW || p[1] < 0 || p[1] > this.constants.texH) {
+						this.color(0, 0, 0, 0);
+					} else {
+						const pixel = texture[p[1]][p[0]];
+						this.color(pixel[0], pixel[1], pixel[2], pixel[3]);
+					}
+				}
+			})
+			.setConstants({ texW, texH })
+			.setDynamicOutput(true)
+			.setOutput([dim, dim])
+			.setGraphical(true);
+
+		return kernel;
 	}
 
-	const _mapTransform = gpu
-		.createKernel(function (uvmap: [u: number, v: number][][], transform: number[][]) {
-			const vec = [
-				uvmap[this.thread.y][this.thread.x][0],
-				uvmap[this.thread.y][this.thread.x][1],
-				1,
-			];
-			const res = [0, 0, 0, 0];
+	let kernel = newKernel(dimension);
+	// no idea why but without this the dimension is wrong
+	kernel.destroy(true);
+	kernel = newKernel(dimension);
 
-			//this thing can't handle nested loops when minified for some reason
-			for (let i = 0; i < 3 * 3; i++) {
-				res[i] += vec[0] * transform[i][0];
-				res[i] += vec[1] * transform[i][1];
-				res[i] += vec[2] * transform[i][2];
-			}
-			if (res[2] === 0) {
-				return [6.5e4, 6.5e4];
-			}
-			return [res[0] / res[2], res[1] / res[2]];
-		})
-		.setOutput([uvmap.length, uvmap[0].length]);
+	const outTsfNormal = multiply(translate2d(-0.5, -0.5), scale2d(1 / dimension, 1 / dimension));
 
-	return new Promise((resolve: (data: [u: number, v: number][][]) => void) => {
-		const res = _mapTransform(uvmap, transform) as [u: number, v: number][][];
-		resolve(res);
-	});
+	return {
+		canvas: kernel.canvas as HTMLCanvasElement,
+		apply: (transform) => {
+			try {
+				let t = multiply(inv(multiply(transform, texTsfNormal)), outTsfNormal);
+				return kernel(texture, t);
+			} catch {
+				kernel.canvas?.getContext('2d')?.clearRect(0, 0, dimension, dimension);
+			}
+		},
+	};
 }
 
 export function rotationXAxis(radians: number) {

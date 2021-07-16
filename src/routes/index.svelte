@@ -3,7 +3,6 @@
 	import { goto } from '$app/navigation';
 	import { session } from '$app/stores';
 
-	let loader: HTMLCanvasElement;
 	let imagePicker: HTMLInputElement;
 	let videoPicker: HTMLInputElement;
 
@@ -23,13 +22,8 @@
 	}
 
 	function loadImage(image: HTMLImageElement) {
-		loader.width = image.width;
-		loader.height = image.height;
-
-		const ctx = loader.getContext('2d');
-		ctx.drawImage(image, 0, 0);
-		const imageData = ctx.getImageData(0, 0, loader.width, loader.height);
-		$session = { ...session, imageData: imageData };
+		$session = { ...session, image: image };
+		console.log(image, session);
 		goto(`${base}/perspective`);
 	}
 </script>
@@ -52,6 +46,4 @@
 		accept="video/*"
 		on:change={() => onPickVideo(videoPicker.files)}
 	/>
-
-	<canvas hidden bind:this={loader} />
 </main>

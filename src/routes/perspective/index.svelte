@@ -3,11 +3,10 @@
 	import { goto } from '$app/navigation';
 	import { session } from '$app/stores';
 
-	import { multiply, inv, transpose } from 'mathjs';
+	import { multiply, inv, transpose, divide } from 'mathjs';
 
-	import { uvMapFromDimensions, getPixelsFromUVMap } from '$lib/image/manipulation';
 	import {
-		mapTransform2d,
+		createTransformHandle,
 		rotationZAxis,
 		rotationYAxis,
 		rotationXAxis,
@@ -18,29 +17,20 @@
 		tr3dTo2d,
 		inverseScaleForVerticalProjection,
 	} from '$lib/image/transform';
+
+	import type { TransformHandle } from '$lib/image/transform';
+
 	import { onMount } from 'svelte';
 
-	let resolution = 360;
-	let transformer: HTMLCanvasElement;
+	let resolution = 1080;
 	let view: HTMLCanvasElement;
 	let grid: HTMLCanvasElement;
+	let transformHandle: TransformHandle;
 	let downloader: HTMLAnchorElement;
 
 	let showGrid = true;
-	let originalImage: ImageData = null;
+	let originalImage: HTMLImageElement = null;
 	let cachedTransform: number[][] = null;
-	let image: ImageData = null;
-	let uvmap: [u: number, v: number][][];
-
-	$: {
-		if (transformer) {
-			transformer.width = resolution;
-			transformer.height = resolution;
-			image = transformer.getContext('2d').createImageData(transformer.width, transformer.height);
-			uvmap = uvMapFromDimensions(transformer.width, transformer.height);
-			cachedTransform = null;
-		}
-	}
 
 	let camera = {
 		height: 1,
@@ -81,27 +71,18 @@
 	$: projectionTransformNotTranslated = multiply(tr3dTo2d(), multiply(imageTransform, projection));
 	let projectionTransform;
 	$: {
-		const translated_pointer: number[] = multiply(
+		const translated_pointer = (multiply(
 			projectionTransformNotTranslated,
 			transpose([navigation.x, -navigation.y, 1])
-		);
+		) as unknown) as number[]; // mathjs collapses matrices with only one row to vectors (number[1][x] -> number[x])
 		const translation = translate2d(
-			translated_pointer[0] / translated_pointer[2],
-			translated_pointer[1] / translated_pointer[2]
+			-translated_pointer[0] / translated_pointer[2],
+			-translated_pointer[1] / translated_pointer[2]
 		);
-		projectionTransform = multiply(inv(translation), projectionTransformNotTranslated);
+		projectionTransform = multiply(translation, projectionTransformNotTranslated);
 	}
 
-	let transform = null;
-	$: {
-		try {
-			transform = multiply(inv(projectionTransform), zoom2d(navigation.zoom * navigation.zoom));
-		} catch {
-			transform = null;
-		}
-	}
-
-	let transformedUvMap;
+	$: transform = multiply(projectionTransform, zoom2d(1 / (navigation.zoom * navigation.zoom)));
 
 	$: drawGrid(grid, view?.width, view?.height, navigation.zoom * navigation.zoom);
 
@@ -143,7 +124,9 @@
 
 	async function transformerLoop() {
 		if (transform === null) {
-			transformer.getContext('2d').clearRect(0, 0, resolution, resolution);
+			transformHandle.canvas
+				.getContext('2d')
+				.clearRect(0, 0, transformHandle.canvas.width, transformHandle.canvas.height);
 			setTimeout(transformerLoop);
 			return;
 		}
@@ -154,16 +137,7 @@
 		}
 
 		cachedTransform = transform;
-		transformedUvMap = await mapTransform2d(uvmap, transform);
-		const pixels = await getPixelsFromUVMap(originalImage, transformedUvMap);
-
-		for (let i = 0; i < image.width * image.height; i++) {
-			image.data[i * 4 + 0] = pixels[i][0];
-			image.data[i * 4 + 1] = pixels[i][1];
-			image.data[i * 4 + 2] = pixels[i][2];
-			image.data[i * 4 + 3] = pixels[i][3];
-		}
-		transformer.getContext('2d').putImageData(image, 0, 0);
+		transformHandle.apply(transform);
 		setTimeout(transformerLoop);
 	}
 
@@ -194,17 +168,19 @@
 
 		const ctx = view.getContext('2d');
 		ctx.clearRect(0, 0, view.width, view.height);
-		ctx.drawImage(transformer, 0, 0, view.width, view.height);
+		ctx.drawImage(transformHandle.canvas, 0, 0, view.width, view.height);
 		if (showGrid) ctx.drawImage(grid, 0, 0, view.width, view.height);
 		requestAnimationFrame(drawLoop);
 	}
 
 	onMount(() => {
 		try {
-			originalImage = $session.imageData;
+			originalImage = $session.image;
 		} catch (e) {
 			return goto(`${base}/`);
 		}
+
+		transformHandle = createTransformHandle(resolution, originalImage);
 
 		setTimeout(transformerLoop);
 		requestAnimationFrame(drawLoop);
@@ -253,8 +229,8 @@
 			type="number"
 			name="resolution"
 			id="resolution"
-			min="120"
-			max="600"
+			min="240"
+			max="2160"
 			step="120"
 			bind:value={resolution}
 		/>
@@ -323,7 +299,6 @@
 	<a href="{base}/" class="btn">Back</a>
 </main>
 
-<canvas hidden bind:this={transformer} width={resolution} height={resolution} />
 <canvas hidden bind:this={grid} />
 <a hidden href="." download="" bind:this={downloader}>hidden</a>
 
