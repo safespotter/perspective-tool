@@ -1,5 +1,5 @@
 import { GPU, KernelOutput } from 'gpu.js';
-import { multiply, inv, e } from 'mathjs';
+import { multiply, inv } from 'mathjs';
 
 let gpu = new GPU();
 
@@ -27,7 +27,7 @@ export function createTransformHandle(
 
 	const texH = originalImage.height;
 	const texW = originalImage.width;
-	const texTsfNormal = multiply(translate2d(-texW / texH / 2, -0.5), scale2d(1 / texH, 1 / texH));
+	const texTsfNormal = multiply(translate2d(-texW / texH / 2, 0.5), scale2d(1 / texH, -1 / texH));
 
 	function newKernel(dim) {
 		const kernel = gpu
@@ -41,12 +41,12 @@ export function createTransformHandle(
 					tv[i] += transform[i][2] * v[2];
 				}
 
-				if (tv[2] == 0) {
+				if (tv[2] === 0) {
 					this.color(0, 0, 0, 0);
 				} else {
 					const p = [Math.floor(tv[0] / tv[2]), Math.floor(tv[1] / tv[2])];
 
-					if (p[0] < 0 || p[0] > this.constants.texW || p[1] < 0 || p[1] > this.constants.texH) {
+					if (p[1] < 0 || p[1] > this.constants.texH || p[0] < 0 || p[0] > this.constants.texW) {
 						this.color(0, 0, 0, 0);
 					} else {
 						const pixel = texture[p[1]][p[0]];
@@ -67,7 +67,7 @@ export function createTransformHandle(
 	kernel.destroy(true);
 	kernel = newKernel(dimension);
 
-	const outTsfNormal = multiply(translate2d(-0.5, -0.5), scale2d(1 / dimension, 1 / dimension));
+	const outTsfNormal = multiply(translate2d(-0.5, 0.5), scale2d(1 / dimension, -1 / dimension));
 
 	return {
 		canvas: kernel.canvas as HTMLCanvasElement,
@@ -154,6 +154,16 @@ export function zoom2d(s: number) {
 		[1, 0, 0],
 		[0, 1, 0],
 		[0, 0, s],
+	];
+}
+
+export function rotate2d(rad: number) {
+	const c = Math.cos(rad);
+	const s = Math.sin(rad);
+	return [
+		[c, -s, 0],
+		[s, c, 0],
+		[0, 0, 1],
 	];
 }
 

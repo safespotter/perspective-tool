@@ -3,7 +3,7 @@
 	import { goto } from '$app/navigation';
 	import { session } from '$app/stores';
 
-	import { multiply, inv, transpose, divide } from 'mathjs';
+	import { multiply, inv, transpose } from 'mathjs';
 
 	import {
 		createTransformHandle,
@@ -22,7 +22,7 @@
 
 	import { onMount } from 'svelte';
 
-	let resolution = 1080;
+	const resolution = 1080;
 	let view: HTMLCanvasElement;
 	let grid: HTMLCanvasElement;
 	let transformHandle: TransformHandle;
@@ -47,11 +47,11 @@
 	};
 
 	$: cameraRotation = multiply(
-		rotationZAxis(Number(camera.roll)),
-		multiply(rotationYAxis(Number(camera.yaw)), rotationXAxis(Number(camera.pitch)))
+		rotationZAxis(+camera.roll),
+		multiply(rotationYAxis(+camera.yaw), rotationXAxis(+camera.pitch))
 	);
 
-	$: imageTransform = multiply(translate(0, 0, Number(camera.height)), cameraRotation);
+	$: imageTransform = multiply(translate(0, 0, +camera.height), cameraRotation);
 
 	$: planeOrigin = multiply(inv(imageTransform), transpose([0, 0, 0, 1])).flat();
 	$: planeNormal = multiply(inv(cameraRotation), transpose([0, 0, 1, 1])).flat();
@@ -71,10 +71,11 @@
 	$: projectionTransformNotTranslated = multiply(tr3dTo2d(), multiply(imageTransform, projection));
 	let projectionTransform;
 	$: {
-		const translated_pointer = (multiply(
-			projectionTransformNotTranslated,
-			transpose([navigation.x, -navigation.y, 1])
-		) as unknown) as number[]; // mathjs collapses matrices with only one row to vectors (number[1][x] -> number[x])
+		const translated_pointer = (multiply(projectionTransformNotTranslated, [
+			-navigation.x,
+			+navigation.y,
+			1,
+		]) as unknown) as number[]; // mathjs collapses matrices with only one row to vectors (number[1][x] -> number[x])
 		const translation = translate2d(
 			-translated_pointer[0] / translated_pointer[2],
 			-translated_pointer[1] / translated_pointer[2]
@@ -82,7 +83,7 @@
 		projectionTransform = multiply(translation, projectionTransformNotTranslated);
 	}
 
-	$: transform = multiply(projectionTransform, zoom2d(1 / (navigation.zoom * navigation.zoom)));
+	$: transform = multiply(zoom2d(1 / (+navigation.zoom * +navigation.zoom)), projectionTransform);
 
 	$: drawGrid(grid, view?.width, view?.height, navigation.zoom * navigation.zoom);
 
@@ -223,16 +224,6 @@
 			max="100"
 			step=".1"
 			bind:value={navigation.y}
-		/>
-		<label for="resolution">Resolution</label>
-		<input
-			type="number"
-			name="resolution"
-			id="resolution"
-			min="240"
-			max="2160"
-			step="120"
-			bind:value={resolution}
 		/>
 
 		<label for="toggle-grid">Toggle grid</label>
