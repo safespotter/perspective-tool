@@ -2,8 +2,7 @@
 	import { base } from '$app/paths';
 	import { goto } from '$app/navigation';
 	import { session } from '$app/stores';
-
-	import { multiply, inv, transpose } from 'mathjs';
+	import NumberInput from '$lib/NumberInput.svelte';
 
 	import {
 		createTransformHandle,
@@ -22,6 +21,7 @@
 	import type { TransformHandle } from '$lib/image/transform';
 
 	import { onMount } from 'svelte';
+	import { pi } from 'mathjs';
 
 	const resolution = 1080;
 	let view: HTMLCanvasElement;
@@ -156,103 +156,80 @@
 </script>
 
 <main>
-	<canvas class="viewer" bind:this={view}> This webapp requires javascript </canvas>
+	<div class="with-drawer">
+		<canvas class="viewer" bind:this={view}> This webapp requires javascript </canvas>
+		<div class="drawer">
+			<label for="toggle-grid">Grid</label>
+			<input type="checkbox" bind:checked={showGrid} />
+			<fieldset>
+				<legend>Navigation</legend>
+				<NumberInput
+					label="Zoom"
+					name="navigation-zoom"
+					min={0.1}
+					max={10}
+					step={0.1}
+					bind:value={navigation.zoom}
+				/>
 
-	<fieldset>
-		<legend>Navigation</legend>
-		<label for="navigation-zoom">Zoom</label>
-		<input
-			type="number"
-			name="navigation-zoom"
-			id="navigation-zoom"
-			min=".1"
-			max="10"
-			step=".1"
-			bind:value={navigation.zoom}
-		/>
+				<NumberInput
+					label="X"
+					name="navigation-x"
+					min={-1}
+					max={1}
+					step={0.01}
+					bind:value={navigation.x}
+				/>
 
-		<label for="navigation-x">X</label>
-		<input
-			type="number"
-			name="navigation-x"
-			id="navigation-x"
-			min="-100"
-			max="100"
-			step=".1"
-			bind:value={navigation.x}
-		/>
+				<NumberInput
+					label="Y"
+					name="navigation-y"
+					min={-1}
+					max={1}
+					step={0.01}
+					bind:value={navigation.y}
+				/>
+			</fieldset>
+			<fieldset>
+				<legend>Camera</legend>
+				<NumberInput
+					label="Focal length"
+					name="focal"
+					min={0}
+					max={10}
+					step={0.01}
+					bind:value={camera.focal}
+				/>
 
-		<label for="navigation-y">Y</label>
-		<input
-			type="number"
-			name="navigation-y"
-			id="navigation-y"
-			min="-100"
-			max="100"
-			step=".1"
-			bind:value={navigation.y}
-		/>
+				<NumberInput
+					label="Height"
+					name="height"
+					min={0}
+					max={10}
+					step={0.01}
+					bind:value={camera.height}
+				/>
+				<NumberInput
+					label="Pitch"
+					name="pitch"
+					min={-2 * pi}
+					max={2 * pi}
+					step={0.01}
+					bind:value={camera.pitch}
+				/>
 
-		<label for="toggle-grid">Toggle grid</label>
-		<input type="checkbox" bind:checked={showGrid} />
-	</fieldset>
-	<fieldset>
-		<legend>Camera</legend>
-		<label for="focal">Focal length</label>
-		<input
-			type="number"
-			name="focal"
-			id="focal"
-			min=".1"
-			max="10"
-			step=".1"
-			bind:value={camera.focal}
-		/>
+				<NumberInput
+					label="Yaw"
+					name="yaw"
+					min={-2 * pi}
+					max={2 * pi}
+					step={0.01}
+					bind:value={camera.yaw}
+				/>
+			</fieldset>
+		</div>
+	</div>
 
-		<label for="height">Height</label>
-		<input
-			type="number"
-			name="height"
-			id="height"
-			min="-100"
-			max="100"
-			step=".1"
-			bind:value={camera.height}
-		/>
-		<hr />
-		<label for="pitch">Pitch</label>
-		<input
-			type="number"
-			name="pitch"
-			id="pitch"
-			min="-100"
-			max="100"
-			step=".1"
-			bind:value={camera.pitch}
-		/>
-
-		<label for="yaw">Yaw</label>
-		<input
-			type="number"
-			name="yaw"
-			id="yaw"
-			min="-100"
-			max="100"
-			step=".1"
-			bind:value={camera.yaw}
-		/>
-
-		<label for="roll">Roll</label>
-		<input
-			type="number"
-			name="roll"
-			id="roll"
-			min="-100"
-			max="100"
-			step=".1"
-			bind:value={camera.roll}
-		/>
-	</fieldset>
 	<button class="btn" on:click={download}>Save transform</button>
 	<a href="{base}/" class="btn">Back</a>
 </main>
@@ -261,6 +238,9 @@
 <a hidden href="." download="" bind:this={downloader}>hidden</a>
 
 <style>
+	.with-drawer {
+		display: flex;
+	}
 	.viewer {
 		border: 1px solid black;
 		width: 100%;
@@ -269,7 +249,29 @@
 		margin: 1em auto;
 	}
 
-	label + * + label {
-		margin-left: 1.5ch;
+	.drawer {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+	}
+
+	.drawer input {
+		width: 6ch;
+		height: 2rem;
+		font-size: 1rem;
+		text-align: center;
+	}
+
+	.drawer > fieldset {
+		width: max-content;
+		margin: 0.3rem;
+		padding: 0.3rem;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+	}
+
+	.drawer > fieldset > legend {
+		margin: 0 auto;
 	}
 </style>

@@ -1,3 +1,5 @@
+@import 'normalize.css';
+
 :root {
 	font-family: sans-serif;
 }
@@ -18,7 +20,7 @@ body {
 main {
 	display: flex;
 	flex-direction: column;
-	width: min(80ch, 100%);
+	width: min(120ch, 100vh, 100%);
 	margin: 1em auto 0;
 }
 
