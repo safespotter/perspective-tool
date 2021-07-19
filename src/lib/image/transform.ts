@@ -1,5 +1,5 @@
 import { GPU, KernelFunction, KernelOutput } from 'gpu.js';
-import { multiply, inv } from 'mathjs';
+import { multiply, inv, transpose, number } from 'mathjs';
 
 let gpu = new GPU();
 
@@ -205,4 +205,55 @@ export function inverseScaleForVerticalProjection(
 
 	const lambda = d + c * f;
 	return [a / lambda, b / lambda, (c * f) / lambda];
+}
+
+export function restoreProjectionWithNavigation(camera, navigation) {
+	const cameraRotation = multiply(
+		rotationZAxis(+camera.roll),
+		multiply(rotationYAxis(+camera.yaw), rotationXAxis(+camera.pitch))
+	);
+
+	const imageTransform = multiply(translate(0, 0, +camera.height), cameraRotation);
+
+	const planeOrigin = multiply(inv(imageTransform), transpose([0, 0, 0, 1])).flat();
+	const planeNormal = multiply(inv(cameraRotation), transpose([0, 0, 1, 1])).flat();
+
+	const plane = [
+		planeNormal[0],
+		planeNormal[1],
+		planeNormal[2],
+		-(
+			planeNormal[0] * planeOrigin[0] +
+			planeNormal[1] * planeOrigin[1] +
+			planeNormal[2] * planeOrigin[2]
+		),
+	] as [a: number, b: number, c: number, d: number];
+
+	const projection = restoreProjection(plane, +camera.focal);
+	const projectionTransformNotTranslated = multiply(
+		tr3dTo2d(),
+		multiply(imageTransform, projection)
+	);
+	const translated_pointer = (multiply(projectionTransformNotTranslated, [
+		-navigation.x,
+		+navigation.y,
+		1,
+	]) as unknown) as number[]; // mathjs collapses matrices with only one row to vectors (number[1][] -> number[])
+	const translation = translate2d(
+		-translated_pointer[0] / translated_pointer[2],
+		-translated_pointer[1] / translated_pointer[2]
+	);
+	const projectionTransform = multiply(translation, projectionTransformNotTranslated);
+
+	const transform = multiply(
+		// zoom2d(1 / (+navigation.zoom * +navigation.zoom)),
+		zoom2d(1 / +navigation.zoom),
+		projectionTransform
+	);
+
+	return {
+		fullTranform: transform,
+		restoreProjectionTransform: projectionTransformNotTranslated,
+		inverseScaleForVerticalProjection: inverseScaleForVerticalProjection(plane, +camera.focal),
+	};
 }

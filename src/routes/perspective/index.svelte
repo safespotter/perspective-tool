@@ -16,6 +16,7 @@
 		zoom2d,
 		tr3dTo2d,
 		inverseScaleForVerticalProjection,
+		restoreProjectionWithNavigation,
 	} from '$lib/image/transform';
 
 	import type { TransformHandle } from '$lib/image/transform';
@@ -33,7 +34,7 @@
 	let cachedTransform: number[][] = null;
 
 	let camera = {
-		height: 1,
+		height: 0,
 		focal: 1,
 		pitch: 0,
 		yaw: 0,
@@ -46,49 +47,12 @@
 		zoom: 0.75,
 	};
 
-	$: cameraRotation = multiply(
-		rotationZAxis(+camera.roll),
-		multiply(rotationYAxis(+camera.yaw), rotationXAxis(+camera.pitch))
-	);
-
-	$: imageTransform = multiply(translate(0, 0, +camera.height), cameraRotation);
-
-	$: planeOrigin = multiply(inv(imageTransform), transpose([0, 0, 0, 1])).flat();
-	$: planeNormal = multiply(inv(cameraRotation), transpose([0, 0, 1, 1])).flat();
-
-	$: plane = [
-		planeNormal[0],
-		planeNormal[1],
-		planeNormal[2],
-		-(
-			planeNormal[0] * planeOrigin[0] +
-			planeNormal[1] * planeOrigin[1] +
-			planeNormal[2] * planeOrigin[2]
-		),
-	] as [a: number, b: number, c: number, d: number];
-
-	$: projection = restoreProjection(plane, camera.focal);
-	$: projectionTransformNotTranslated = multiply(tr3dTo2d(), multiply(imageTransform, projection));
-	let projectionTransform;
-	$: {
-		const translated_pointer = (multiply(projectionTransformNotTranslated, [
-			-navigation.x,
-			+navigation.y,
-			1,
-		]) as unknown) as number[]; // mathjs collapses matrices with only one row to vectors (number[1][x] -> number[x])
-		const translation = translate2d(
-			-translated_pointer[0] / translated_pointer[2],
-			-translated_pointer[1] / translated_pointer[2]
-		);
-		projectionTransform = multiply(translation, projectionTransformNotTranslated);
-	}
-
-	$: transform = multiply(zoom2d(1 / (+navigation.zoom * +navigation.zoom)), projectionTransform);
+	$: transform = restoreProjectionWithNavigation(camera, navigation);
 
 	$: drawGrid(grid, view?.width, view?.height, navigation.zoom * navigation.zoom);
 
 	async function drawGrid(grid: HTMLCanvasElement, width: number, height: number, zoom: number) {
-		if (!grid || !width || !height) {
+		if (!grid || !width || !height || !zoom) {
 			return;
 		}
 
@@ -124,7 +88,7 @@
 	}
 
 	async function transformerLoop() {
-		if (transform === null) {
+		if (transform.fullTranform === null) {
 			transformHandle.canvas
 				.getContext('2d')
 				.clearRect(0, 0, transformHandle.canvas.width, transformHandle.canvas.height);
@@ -132,20 +96,20 @@
 			return;
 		}
 
-		if (transform === cachedTransform) {
+		if (transform.fullTranform === cachedTransform) {
 			setTimeout(transformerLoop);
 			return;
 		}
 
-		cachedTransform = transform;
-		transformHandle.apply(transform);
+		cachedTransform = transform.fullTranform;
+		transformHandle.apply(transform.fullTranform);
 		setTimeout(transformerLoop);
 	}
 
 	function download() {
 		const data = {
-			projection: projectionTransform,
-			inverseScale: inverseScaleForVerticalProjection(plane, camera.focal),
+			projection: transform.restoreProjectionTransform,
+			inverseScale: transform.inverseScaleForVerticalProjection,
 		};
 
 		const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application.json' });
@@ -177,6 +141,9 @@
 	onMount(() => {
 		try {
 			originalImage = $session.image;
+			if (!originalImage) {
+				throw new ReferenceError('No image found in session');
+			}
 		} catch (e) {
 			return goto(`${base}/`);
 		}
