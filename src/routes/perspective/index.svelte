@@ -184,7 +184,7 @@
 		}
 
 		camera.pitch += (e.clientY - mousePos.y) * movementMultiplier;
-		camera.yaw += (e.clientX - mousePos.x) * movementMultiplier;
+		camera.yaw -= (e.clientX - mousePos.x) * movementMultiplier;
 
 		mousePos.x = e.clientX;
 		mousePos.y = e.clientY;
