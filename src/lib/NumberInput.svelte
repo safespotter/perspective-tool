@@ -6,21 +6,28 @@
 	export let min = -100;
 	export let max = 100;
 	export let step = 1;
+	export let quadratic = false;
 
 	const timeDelay = 0.3;
 	const timestep = 0.1;
 	const multiplierTimestep = 1;
-	let stepMultiplier = 0.6;
+	let stepMultiplier = 0.8;
+
+	$: hiddenValue = quadratic ? Math.sqrt(Math.abs(value)) * Math.sign(value) : value;
 
 	let functionExecutor = null;
 	let multiplierExecutor = null;
 
 	function increase() {
-		value = Math.min(value + step * stepMultiplier, max);
+		hiddenValue = hiddenValue + step * stepMultiplier;
+		value = quadratic ? hiddenValue * hiddenValue * Math.sign(hiddenValue) : hiddenValue;
+		value = Math.min(value, max);
 	}
 
 	function decrease() {
-		value = Math.max(value - step * stepMultiplier, min);
+		hiddenValue = hiddenValue - step * stepMultiplier;
+		value = quadratic ? hiddenValue * hiddenValue * Math.sign(hiddenValue) : hiddenValue;
+		value = Math.max(value, min);
 	}
 
 	function mouseDown(foo) {
