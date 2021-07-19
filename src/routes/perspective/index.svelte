@@ -138,6 +138,62 @@
 		requestAnimationFrame(drawLoop);
 	}
 
+	enum MouseButton {
+		left,
+		right,
+	}
+
+	const movementMultiplier = 0.001;
+	let mouseButton: MouseButton = null;
+	let mousePos = { x: 0, y: 0 };
+
+	function pointerdown(e: PointerEvent) {
+		if (!view) {
+			return;
+		}
+
+		const bcr = view.getBoundingClientRect();
+		mousePos.x = e.clientX;
+		mousePos.y = e.clientY;
+		if (
+			mousePos.x < bcr.left ||
+			mousePos.x > bcr.right ||
+			mousePos.y < bcr.top ||
+			mousePos.y > bcr.bottom
+		) {
+			return;
+		}
+
+		switch (e.button) {
+			case 0:
+				mouseButton = MouseButton.left;
+				break;
+			case 2:
+				mouseButton = MouseButton.right;
+				break;
+			default:
+				mouseButton = null;
+		}
+	}
+	function pointerup(e: PointerEvent) {
+		mouseButton = null;
+	}
+	function pointermove(e: PointerEvent) {
+		if (mouseButton != MouseButton.left) {
+			return;
+		}
+
+		camera.pitch += (e.clientY - mousePos.y) * movementMultiplier;
+		camera.yaw += (e.clientX - mousePos.x) * movementMultiplier;
+
+		mousePos.x = e.clientX;
+		mousePos.y = e.clientY;
+	}
+
+	function wheel(e: WheelEvent) {
+		camera.focal -= e.deltaY * movementMultiplier;
+	}
+
 	onMount(() => {
 		try {
 			originalImage = $session.image;
@@ -155,12 +211,14 @@
 	});
 </script>
 
+<svelte:window on:pointerdown={pointerdown} on:pointerup={pointerup} on:pointermove={pointermove} />
+
 <main>
 	<div class="with-drawer">
-		<canvas class="viewer" bind:this={view}> This webapp requires javascript </canvas>
+		<canvas class="viewer" bind:this={view} on:wheel|preventDefault={wheel}>
+			This webapp requires javascript
+		</canvas>
 		<div class="drawer">
-			<label for="toggle-grid">Grid</label>
-			<input type="checkbox" bind:checked={showGrid} />
 			<fieldset>
 				<legend>Navigation</legend>
 				<NumberInput
@@ -169,6 +227,7 @@
 					min={0.1}
 					max={10}
 					step={0.1}
+					initialvalue={1}
 					bind:value={navigation.zoom}
 				/>
 
@@ -198,6 +257,7 @@
 					min={0}
 					max={10}
 					step={0.01}
+					initialvalue={1}
 					bind:value={camera.focal}
 				/>
 
@@ -227,6 +287,10 @@
 					bind:value={camera.yaw}
 				/>
 			</fieldset>
+			<div>
+				<label for="toggle-grid">Grid</label>
+				<input type="checkbox" bind:checked={showGrid} />
+			</div>
 		</div>
 	</div>
 
@@ -240,6 +304,8 @@
 <style>
 	.with-drawer {
 		display: flex;
+		align-items: center;
+		justify-items: center;
 	}
 	.viewer {
 		border: 1px solid black;
@@ -255,13 +321,6 @@
 		align-items: center;
 	}
 
-	.drawer input {
-		width: 6ch;
-		height: 2rem;
-		font-size: 1rem;
-		text-align: center;
-	}
-
 	.drawer > fieldset {
 		width: max-content;
 		margin: 0.3rem;
@@ -273,5 +332,11 @@
 
 	.drawer > fieldset > legend {
 		margin: 0 auto;
+	}
+
+	.drawer input[type='checkbox'] {
+		width: 1rem;
+		height: 1rem;
+		margin-left: 0.5ch;
 	}
 </style>
