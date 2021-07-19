@@ -246,8 +246,7 @@ export function restoreProjectionWithNavigation(camera, navigation) {
 	const projectionTransform = multiply(translation, projectionTransformNotTranslated);
 
 	const transform = multiply(
-		// zoom2d(1 / (+navigation.zoom * +navigation.zoom)),
-		zoom2d(1 / +navigation.zoom),
+		zoom2d(1 / (+navigation.zoom * +navigation.zoom)),
 		projectionTransform
 	);
 
