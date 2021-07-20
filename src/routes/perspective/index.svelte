@@ -258,6 +258,7 @@
 					max={10}
 					step={0.01}
 					initialvalue={1}
+					quadratic={true}
 					bind:value={camera.focal}
 				/>
 
@@ -266,7 +267,8 @@
 					name="height"
 					min={0}
 					max={10}
-					step={0.01}
+					step={0.02}
+					quadratic={true}
 					bind:value={camera.height}
 				/>
 				<NumberInput
