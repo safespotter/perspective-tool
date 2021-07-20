@@ -5,7 +5,7 @@ export type Vec4D = [a: number, b: number, c: number, d: number];
 
 let gpu = new GPU();
 
-function loadImage(image: HTMLImageElement | HTMLVideoElement) {
+function loadImage(image: HTMLImageElement) {
 	const load = gpu
 		.createKernel(function (input) {
 			return input[this.thread.y][this.thread.x];
@@ -21,14 +21,11 @@ export type TransformHandle = {
 	apply: (transform: any) => KernelOutput;
 };
 
-export function createTransformHandle(
-	dimension,
-	originalImage: HTMLImageElement | HTMLVideoElement
-): TransformHandle {
-	const texture = loadImage(originalImage);
+export function createTransformHandle(dimension, image: HTMLImageElement): TransformHandle {
+	const texture = loadImage(image);
 
-	const texH = originalImage.height;
-	const texW = originalImage.width;
+	const texH = image.height;
+	const texW = image.width;
 	const texTsfNormal = multiply(translate2d(-texW / texH / 2, 0.5), scale2d(1 / texH, -1 / texH));
 
 	function newKernel(dim) {

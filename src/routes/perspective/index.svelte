@@ -18,7 +18,6 @@
 	let downloader: HTMLAnchorElement;
 
 	let showGrid = true;
-	let originalImage: HTMLImageElement = null;
 	let cachedTransform: number[][] = null;
 
 	let camera = {
@@ -187,18 +186,51 @@
 
 	onMount(() => {
 		try {
-			originalImage = $session.image;
-			if (!originalImage) {
+			const type = $session.type;
+			const source = $session.source;
+			if (!type || !source) {
 				throw new ReferenceError('No image found in session');
+			}
+
+			function start(image: HTMLImageElement) {
+				transformHandle = createTransformHandle(resolution, image);
+				setTimeout(transformerLoop);
+				requestAnimationFrame(drawLoop);
+			}
+
+			switch (type) {
+				case 'image':
+					const image = new Image();
+					image.onload = (e) => start(image);
+					image.src = source;
+					break;
+				case 'video':
+					const video = document.createElement('video');
+					video.volume = 0;
+
+					const videoCanvas = document.createElement('canvas');
+					video.oncanplay = (e) => {
+						videoCanvas.width = video.videoWidth;
+						videoCanvas.height = video.videoHeight;
+						videoCanvas.getContext('2d').drawImage(video, 0, 0);
+
+						const image = new Image();
+						image.onload = (e) => {
+							start(image);
+							video.remove();
+							videoCanvas.remove();
+						};
+						image.src = videoCanvas.toDataURL();
+					};
+
+					video.src = source;
+					break;
+				default:
+					throw new ReferenceError('Input type not supported');
 			}
 		} catch (e) {
 			return goto(`${base}/`);
 		}
-
-		transformHandle = createTransformHandle(resolution, originalImage);
-
-		setTimeout(transformerLoop);
-		requestAnimationFrame(drawLoop);
 	});
 </script>
 

@@ -6,43 +6,41 @@
 	let imagePicker: HTMLInputElement;
 	let videoPicker: HTMLInputElement;
 
-	function onPickImage(files: FileList) {
+	function onPick(files: FileList, type: string) {
 		const imgBlob = files[0];
-
-		const image = new Image();
-		image.onload = (e) => loadImage(image);
-
 		const reader = new FileReader();
-		reader.onload = (e) => (image.src = e.target.result as string);
+		reader.onload = (e) => loadSource(e.target.result as string, type);
 		reader.readAsDataURL(imgBlob);
 	}
 
-	function onPickVideo(files: FileList) {
-		return;
-	}
-
-	function loadImage(image: HTMLImageElement) {
-		$session = { ...session, image: image };
+	function loadSource(source, type) {
+		$session = { ...session, source: source, type: type };
 		goto(`${base}/perspective`);
 	}
 </script>
 
 <main>
 	<button class="btn" on:click={() => imagePicker.click()}> apri immagine </button>
-	<!-- <button class="btn" on:click={() => videoPicker.click()}> apri video </button> -->
+	<button class="btn" on:click={() => videoPicker.click()}> apri video </button>
 
 	<input
 		hidden
 		type="file"
 		bind:this={imagePicker}
 		accept="image/*"
-		on:change={() => onPickImage(imagePicker.files)}
+		on:change={() => onPick(imagePicker.files, 'image')}
 	/>
 	<input
 		hidden
 		type="file"
 		bind:this={videoPicker}
 		accept="video/*"
-		on:change={() => onPickVideo(videoPicker.files)}
+		on:change={() => onPick(videoPicker.files, 'video')}
 	/>
 </main>
+
+<style>
+	.btn {
+		margin-bottom: 0.3rem;
+	}
+</style>
