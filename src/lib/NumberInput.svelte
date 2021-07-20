@@ -68,7 +68,12 @@
 	</label>
 {/if}
 <div class="number-input">
-	<button class="btn decrease" on:pointerdown={() => mouseDown(decrease)} on:pointerup={mouseUp}>
+	<button
+		class="btn decrease"
+		on:pointerdown={() => mouseDown(decrease)}
+		on:pointerup={mouseUp}
+		on:pointerleave={mouseUp}
+	>
 		&minus;
 	</button>
 	<input
@@ -79,7 +84,12 @@
 		on:change={() => (value = +value || 0)}
 		on:pointerdown={clickInput}
 	/>
-	<button class="btn increase" on:pointerdown={() => mouseDown(increase)} on:pointerup={mouseUp}>
+	<button
+		class="btn increase"
+		on:pointerdown={() => mouseDown(increase)}
+		on:pointerup={mouseUp}
+		on:pointerleave={mouseUp}
+	>
 		&plus;
 	</button>
 </div>

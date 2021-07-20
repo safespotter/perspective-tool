@@ -1,5 +1,4 @@
 @import 'normalize.css';
-
 :root {
 	font-family: sans-serif;
 }
@@ -25,19 +24,23 @@ main {
 }
 
 .btn {
-	border: 1px solid black;
+	border: 1px solid #333;
 	background: white;
 	padding: 1em 2em;
 	text-decoration: none;
 	color: black;
 	font-family: inherit;
+	border-radius: .3rem;
+	box-shadow: .1rem .1rem .3rem #0006;
+	
 }
 
 .btn:hover {
-	background-color: lightgray;
+	background-color: #0006;
 }
 
 .btn:active {
-	background-color: gray;
+	background-color: #0004;
 	color: white;
+	box-shadow: inset .1rem .1rem .3rem #0008;
 }

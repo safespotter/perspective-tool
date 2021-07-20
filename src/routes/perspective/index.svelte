@@ -289,7 +289,7 @@
 	</div>
 
 	<button class="btn" on:click={download}>Save transform</button>
-	<a href="{base}/" class="btn">Back</a>
+	<a href="{base}/" class="btn" draggable="false" on:selectstart|preventDefault>Back</a>
 </main>
 
 <canvas hidden bind:this={grid} />
