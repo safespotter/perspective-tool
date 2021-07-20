@@ -1,5 +1,7 @@
 import { GPU, KernelFunction, KernelOutput } from 'gpu.js';
-import { multiply, inv, transpose, number } from 'mathjs';
+import { multiply, inv, transpose, number, sum, subtract } from 'mathjs';
+
+export type Vec4D = [a: number, b: number, c: number, d: number];
 
 let gpu = new GPU();
 
@@ -127,6 +129,15 @@ export function translate(x: number, y: number, z: number) {
 	];
 }
 
+export function translatePlane(x: number, y: number, z: number) {
+	return [
+		[1, 0, 0, 0],
+		[0, 1, 0, 0],
+		[0, 0, 1, 0],
+		[-x, -y, -z, 1],
+	];
+}
+
 export function translate2d(x: number, y: number) {
 	return [
 		[1, 0, x],
@@ -182,10 +193,7 @@ export function tr3dTo2d() {
 	];
 }
 
-export function restoreProjection(
-	plane: [a: number, b: number, c: number, d: number],
-	focalLength: number
-) {
+export function restoreProjection(plane: Vec4D, focalLength: number) {
 	const [a, b, c, d] = plane;
 	const f = focalLength;
 	return [
@@ -196,10 +204,7 @@ export function restoreProjection(
 	];
 }
 
-export function inverseScaleForVerticalProjection(
-	plane: [a: number, b: number, c: number, d: number],
-	focalLength: number
-) {
+export function inverseScaleForVerticalProjection(plane: Vec4D, focalLength: number) {
 	const [a, b, c, d] = plane;
 	const f = focalLength;
 
@@ -215,44 +220,29 @@ export function restoreProjectionWithNavigation(camera, navigation) {
 
 	const imageTransform = multiply(translate(0, 0, +camera.height), cameraRotation);
 
-	const planeOrigin = multiply(inv(imageTransform), transpose([0, 0, 0, 1])).flat();
-	const planeNormal = multiply(inv(cameraRotation), transpose([0, 0, 1, 1])).flat();
+	let planeOrigin = multiply(inv(imageTransform), [0, 0, 0, 1]).flat();
+	planeOrigin = planeOrigin.map((x) => x / planeOrigin[3]);
 
-	const plane = [
-		planeNormal[0],
-		planeNormal[1],
-		planeNormal[2],
-		-(
-			planeNormal[0] * planeOrigin[0] +
-			planeNormal[1] * planeOrigin[1] +
-			planeNormal[2] * planeOrigin[2]
-		),
-	] as [a: number, b: number, c: number, d: number];
+	let plane = [0, 0, 1, 0];
+	plane = multiply(inv(cameraRotation), plane).flat();
+	plane = multiply(translatePlane(planeOrigin[0], planeOrigin[1], planeOrigin[2]), plane).flat();
 
-	const projection = restoreProjection(plane, +camera.focal);
-	const projectionTransformNotTranslated = multiply(
-		tr3dTo2d(),
-		multiply(imageTransform, projection)
-	);
-	const translated_pointer = (multiply(projectionTransformNotTranslated, [
-		-navigation.x,
-		+navigation.y,
-		1,
-	]) as unknown) as number[]; // mathjs collapses matrices with only one row to vectors (number[1][] -> number[])
-	const translation = translate2d(
-		-translated_pointer[0] / translated_pointer[2],
-		-translated_pointer[1] / translated_pointer[2]
-	);
-	const projectionTransform = multiply(translation, projectionTransformNotTranslated);
+	let projection = restoreProjection(plane as Vec4D, +camera.focal);
+	projection = multiply(tr3dTo2d(), multiply(imageTransform, projection));
 
-	const transform = multiply(
-		zoom2d(1 / (+navigation.zoom * +navigation.zoom)),
-		projectionTransform
-	);
+	let translated_pointer = multiply(projection, [-navigation.x, +navigation.y, 1]).flat();
+	translated_pointer = translated_pointer.map((x) => x / translated_pointer[2]);
+	const translation = translate2d(-translated_pointer[0], -translated_pointer[1]);
+
+	let transform = multiply(translation, projection);
+	transform = multiply(zoom2d(1 / +navigation.zoom), transform);
 
 	return {
 		fullTranform: transform,
-		restoreProjectionTransform: projectionTransformNotTranslated,
-		inverseScaleForVerticalProjection: inverseScaleForVerticalProjection(plane, +camera.focal),
+		restoreProjectionTransform: projection,
+		inverseScaleForVerticalProjection: inverseScaleForVerticalProjection(
+			plane as Vec4D,
+			+camera.focal
+		),
 	};
 }

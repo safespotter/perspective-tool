@@ -4,19 +4,7 @@
 	import { session } from '$app/stores';
 	import NumberInput from '$lib/NumberInput.svelte';
 
-	import {
-		createTransformHandle,
-		rotationZAxis,
-		rotationYAxis,
-		rotationXAxis,
-		translate,
-		restoreProjection,
-		translate2d,
-		zoom2d,
-		tr3dTo2d,
-		inverseScaleForVerticalProjection,
-		restoreProjectionWithNavigation,
-	} from '$lib/image/transform';
+	import { createTransformHandle, restoreProjectionWithNavigation } from '$lib/image/transform';
 
 	import type { TransformHandle } from '$lib/image/transform';
 
@@ -44,15 +32,15 @@
 	let navigation = {
 		x: 0,
 		y: 0,
-		zoom: 0.75,
+		zoom: 0.5,
 	};
 
 	$: transform = restoreProjectionWithNavigation(camera, navigation);
 
-	$: drawGrid(grid, view?.width, view?.height, navigation.zoom * navigation.zoom);
+	$: drawGrid(grid, view?.width, view?.height, navigation.zoom);
 
 	async function drawGrid(grid: HTMLCanvasElement, width: number, height: number, zoom: number) {
-		if (!grid || !width || !height || !zoom) {
+		if (!grid || !width || !height || +zoom == 0 || +zoom == NaN) {
 			return;
 		}
 
@@ -144,6 +132,7 @@
 	}
 
 	const movementMultiplier = 0.001;
+	const wheelMultiplier = 0.0005;
 	let mouseButton: MouseButton = null;
 	let mousePos = { x: 0, y: 0 };
 
@@ -191,7 +180,9 @@
 	}
 
 	function wheel(e: WheelEvent) {
-		camera.focal -= e.deltaY * movementMultiplier;
+		let focalSqrt = Math.sqrt(Math.abs(camera.focal)) * Math.sign(camera.focal);
+		focalSqrt -= e.deltaY * wheelMultiplier;
+		camera.focal = focalSqrt * focalSqrt * Math.sign(focalSqrt);
 	}
 
 	onMount(() => {
@@ -228,6 +219,7 @@
 					max={10}
 					step={0.1}
 					initialvalue={1}
+					quadratic={true}
 					bind:value={navigation.zoom}
 				/>
 
