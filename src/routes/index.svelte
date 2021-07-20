@@ -9,12 +9,12 @@
 	function onPick(files: FileList, type: string) {
 		const imgBlob = files[0];
 		const reader = new FileReader();
-		reader.onload = (e) => loadSource(e.target.result as string, type);
+		reader.onload = (e) => loadSource(e.target.result as string, type, imgBlob.name);
 		reader.readAsDataURL(imgBlob);
 	}
 
-	function loadSource(source, type) {
-		$session = { ...session, source: source, type: type };
+	function loadSource(source, type, name) {
+		$session = { ...session, source: source, type: type, name: name };
 		goto(`${base}/perspective`);
 	}
 </script>

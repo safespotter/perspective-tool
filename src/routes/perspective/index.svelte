@@ -11,6 +11,8 @@
 	import { onMount } from 'svelte';
 	import { pi } from 'mathjs';
 
+	const fileExtension = '_view.json';
+
 	const resolution = 1080;
 	let view: HTMLCanvasElement;
 	let grid: HTMLCanvasElement;
@@ -94,6 +96,9 @@
 	}
 
 	function download() {
+		let name: string = $session.name;
+		name = name.replace(/\.\w*$/, fileExtension);
+
 		const data = {
 			projection: transform.restoreProjectionTransform,
 			inverseScale: transform.inverseScaleForVerticalProjection,
@@ -103,7 +108,7 @@
 		const url = URL.createObjectURL(blob);
 
 		downloader.href = url;
-		downloader.download = `${+Date.now()}.json`;
+		downloader.download = name;
 		downloader.click();
 
 		URL.revokeObjectURL(url);
