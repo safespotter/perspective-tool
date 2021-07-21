@@ -20,6 +20,7 @@
 	let downloader: HTMLAnchorElement;
 
 	let showGrid = true;
+	let showOriginal = false;
 	let cachedTransform: number[][] = null;
 
 	let camera = {
@@ -41,7 +42,7 @@
 	$: drawGrid(grid, view?.width, view?.height, navigation.zoom);
 
 	async function drawGrid(grid: HTMLCanvasElement, width: number, height: number, zoom: number) {
-		if (!grid || !width || !height || +zoom == 0 || +zoom == NaN) {
+		if (!grid || !width || !height || +zoom < 0.01 || +zoom == NaN) {
 			return;
 		}
 
@@ -77,7 +78,15 @@
 	}
 
 	async function transformerLoop() {
-		if (transform.fullTranform === null) {
+		const t = showOriginal
+			? [
+					[1, 0, 0],
+					[0, 1, 0],
+					[0, 0, 2],
+			  ]
+			: transform.fullTranform;
+
+		if (t === null) {
 			transformHandle.canvas
 				.getContext('2d')
 				.clearRect(0, 0, transformHandle.canvas.width, transformHandle.canvas.height);
@@ -85,13 +94,13 @@
 			return;
 		}
 
-		if (transform.fullTranform === cachedTransform) {
+		if (t === cachedTransform) {
 			setTimeout(transformerLoop);
 			return;
 		}
 
-		cachedTransform = transform.fullTranform;
-		transformHandle.apply(transform.fullTranform);
+		cachedTransform = t;
+		transformHandle.apply(t);
 		setTimeout(transformerLoop);
 	}
 
@@ -252,7 +261,7 @@
 				<NumberInput
 					label="Zoom"
 					name="navigation-zoom"
-					min={0.1}
+					min={0}
 					max={10}
 					step={0.1}
 					initialvalue={1}
@@ -295,7 +304,7 @@
 					label="Height"
 					name="height"
 					min={0}
-					max={10}
+					max={15}
 					step={0.02}
 					quadratic={true}
 					bind:value={camera.height}
@@ -320,7 +329,12 @@
 			</fieldset>
 			<div>
 				<label for="toggle-grid">Grid</label>
-				<input type="checkbox" bind:checked={showGrid} />
+				<input name="toggle-grid" type="checkbox" bind:checked={showGrid} />
+			</div>
+
+			<div>
+				<label for="show-original">Show original</label>
+				<input name="show-original" type="checkbox" bind:checked={showOriginal} />
 			</div>
 		</div>
 	</div>
