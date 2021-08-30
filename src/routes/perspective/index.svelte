@@ -3,24 +3,24 @@
 	import { goto } from '$app/navigation';
 	import { session } from '$app/stores';
 	import NumberInput from '$lib/NumberInput.svelte';
+	import ToggleButton from '$lib/ToggleButton.svelte';
 
 	import { createTransformHandle, restoreProjectionWithNavigation } from '$lib/image/transform';
 
 	import type { TransformHandle } from '$lib/image/transform';
 
 	import { onMount } from 'svelte';
-	import { pi } from 'mathjs';
+	import { multiply, pi, inv } from 'mathjs';
 
 	const fileExtension = '_view.json';
 
 	const resolution = 1080;
 	let view: HTMLCanvasElement;
-	let grid: HTMLCanvasElement;
 	let transformHandle: TransformHandle;
 	let downloader: HTMLAnchorElement;
 
-	let showGrid = true;
 	let showOriginal = false;
+	let editRulers = false;
 	let cachedTransform: number[][] = null;
 
 	let camera = {
@@ -39,43 +39,20 @@
 
 	$: transform = restoreProjectionWithNavigation(camera, navigation);
 
-	$: drawGrid(grid, view?.width, view?.height, navigation.zoom);
-
-	async function drawGrid(grid: HTMLCanvasElement, width: number, height: number, zoom: number) {
-		if (!grid || !width || !height || +zoom < 0.01 || +zoom == NaN) {
-			return;
-		}
-
-		grid.width = width;
-		grid.height = height;
-
-		const ctx = grid.getContext('2d');
-		ctx.strokeStyle = '#fff';
-		ctx.lineWidth = 1;
-		const centerX = width / 2;
-		const centerY = height / 2;
-
-		ctx.clearRect(0, 0, width, height);
-
-		ctx.beginPath();
-		for (let i = 0; i * 2 < width / zoom; i++) {
-			const x = i * width * zoom;
-			ctx.moveTo(centerX + x, 0);
-			ctx.lineTo(centerX + x, height);
-
-			ctx.moveTo(centerX - x, 0);
-			ctx.lineTo(centerX - x, height);
-		}
-		for (let i = 0; i * 2 < height / zoom; i++) {
-			const y = i * height * zoom;
-			ctx.moveTo(0, centerY + y);
-			ctx.lineTo(width, centerY + y);
-
-			ctx.moveTo(0, centerY - y);
-			ctx.lineTo(width, centerY - y);
-		}
-		ctx.stroke();
-	}
+	let rawRulerPoints: [number, number, number][] = [];
+	$: rulerPoints = rawRulerPoints.map(
+		(point) =>
+			(multiply(
+				showOriginal
+					? [
+							[1, 0, 0],
+							[0, 1, 0],
+							[0, 0, 2],
+					  ]
+					: transform.fullTransform,
+				point
+			) as unknown) as [number, number, number]
+	);
 
 	async function transformerLoop() {
 		const t = showOriginal
@@ -84,7 +61,7 @@
 					[0, 1, 0],
 					[0, 0, 2],
 			  ]
-			: transform.fullTranform;
+			: transform.fullTransform;
 
 		if (t === null) {
 			transformHandle.canvas
@@ -135,7 +112,21 @@
 		const ctx = view.getContext('2d');
 		ctx.clearRect(0, 0, view.width, view.height);
 		ctx.drawImage(transformHandle.canvas, 0, 0, view.width, view.height);
-		if (showGrid) ctx.drawImage(grid, 0, 0, view.width, view.height);
+		ctx.strokeStyle = '#000';
+		ctx.fillStyle = '#f0f';
+		rulerPoints.forEach((point) => {
+			ctx.beginPath();
+			ctx.arc(
+				(point[0] / point[2] + 0.5) * view.height,
+				(point[1] / point[2] + 0.5) * view.height,
+				5,
+				0,
+				2 * 3.15
+			);
+			ctx.stroke();
+			ctx.fill();
+		});
+
 		requestAnimationFrame(drawLoop);
 	}
 
@@ -169,6 +160,11 @@
 		switch (e.button) {
 			case 0:
 				mouseButton = MouseButton.left;
+				if (editRulers) {
+					let xpos = (mousePos.x - bcr.left) / view.height - 0.5;
+					let ypos = (mousePos.y - bcr.top) / view.height - 0.5;
+					pointRuler(xpos, ypos);
+				}
 				break;
 			case 2:
 				mouseButton = MouseButton.right;
@@ -181,7 +177,7 @@
 		mouseButton = null;
 	}
 	function pointermove(e: PointerEvent) {
-		if (mouseButton != MouseButton.left) {
+		if (editRulers || mouseButton != MouseButton.left) {
 			return;
 		}
 
@@ -196,6 +192,17 @@
 		let focalSqrt = Math.sqrt(Math.abs(camera.focal)) * Math.sign(camera.focal);
 		focalSqrt -= e.deltaY * wheelMultiplier;
 		camera.focal = focalSqrt * focalSqrt * Math.sign(focalSqrt);
+	}
+
+	function pointRuler(xpos, ypos) {
+		let point = (multiply(inv(transform.fullTransform), [xpos, ypos, 1]) as unknown) as [
+			number,
+			number,
+			number
+		];
+		rawRulerPoints.push(point);
+		rawRulerPoints = rawRulerPoints;
+		console.log(rawRulerPoints);
 	}
 
 	onMount(() => {
@@ -327,15 +334,9 @@
 					bind:value={camera.yaw}
 				/>
 			</fieldset>
-			<div>
-				<label for="toggle-grid">Grid</label>
-				<input name="toggle-grid" type="checkbox" bind:checked={showGrid} />
-			</div>
 
-			<div>
-				<label for="show-original">Show original</label>
-				<input name="show-original" type="checkbox" bind:checked={showOriginal} />
-			</div>
+			<ToggleButton bind:flag={showOriginal}>Show original</ToggleButton>
+			<ToggleButton bind:flag={editRulers}>Rulers</ToggleButton>
 		</div>
 	</div>
 
@@ -343,7 +344,6 @@
 	<a href="{base}/" class="btn" draggable="false" on:selectstart|preventDefault>Back</a>
 </main>
 
-<canvas hidden bind:this={grid} />
 <a hidden href="." download="" bind:this={downloader}>hidden</a>
 
 <style>

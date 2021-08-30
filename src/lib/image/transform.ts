@@ -235,7 +235,7 @@ export function restoreProjectionWithNavigation(camera, navigation) {
 	transform = multiply(zoom2d(1 / +navigation.zoom), transform);
 
 	return {
-		fullTranform: transform,
+		fullTransform: transform,
 		restoreProjectionTransform: projection,
 		inverseScaleForVerticalProjection: inverseScaleForVerticalProjection(
 			plane as Vec4D,
