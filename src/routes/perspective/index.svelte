@@ -2,15 +2,17 @@
 	import { base } from '$app/paths';
 	import { goto } from '$app/navigation';
 	import { session } from '$app/stores';
+	import { Ruler } from '$lib/Ruler';
 	import NumberInput from '$lib/NumberInput.svelte';
 	import ToggleButton from '$lib/ToggleButton.svelte';
 
-	import { createTransformHandle, restoreProjectionWithNavigation } from '$lib/image/transform';
+	import { createTransformHandle, restoreProjectionWithNavigation } from '$lib/transform';
 
-	import type { TransformHandle } from '$lib/image/transform';
+	import type { TransformHandle } from '$lib/transform';
 
 	import { onMount } from 'svelte';
 	import { multiply, pi, inv } from 'mathjs';
+	import type { Vec2, Vec3 } from '$lib/shared';
 
 	const fileExtension = '_view.json';
 
@@ -39,20 +41,13 @@
 
 	$: transform = restoreProjectionWithNavigation(camera, navigation);
 
-	let rawRulerPoints: [number, number, number][] = [];
-	$: rulerPoints = rawRulerPoints.map(
-		(point) =>
-			(multiply(
-				showOriginal
-					? [
-							[1, 0, 0],
-							[0, 1, 0],
-							[0, 0, 2],
-					  ]
-					: transform.fullTransform,
-				point
-			) as unknown) as [number, number, number]
-	);
+	let rulers: Ruler[] = [];
+	let activeRuler: Ruler = null;
+
+	$: {
+		rulers.forEach((r) => r.setTransform(transform.fullTransform));
+		activeRuler?.setTransform(transform.fullTransform);
+	}
 
 	async function transformerLoop() {
 		const t = showOriginal
@@ -112,22 +107,29 @@
 		const ctx = view.getContext('2d');
 		ctx.clearRect(0, 0, view.width, view.height);
 		ctx.drawImage(transformHandle.canvas, 0, 0, view.width, view.height);
-		ctx.strokeStyle = '#000';
-		ctx.fillStyle = '#f0f';
-		rulerPoints.forEach((point) => {
+		ctx.strokeStyle = '#0f0';
+		ctx.fillStyle = '#0f0';
+		rulers.forEach((ruler) => {
+			let points = ruler.get2d();
+			points = points.map((p) => p.map((x) => (x + 0.5) * view.height)) as [Vec2, Vec2];
+			points.forEach((p) => drawPoint(ctx, p));
 			ctx.beginPath();
-			ctx.arc(
-				(point[0] / point[2] + 0.5) * view.height,
-				(point[1] / point[2] + 0.5) * view.height,
-				5,
-				0,
-				2 * 3.15
-			);
+			ctx.moveTo(points[0][0], points[0][1]);
+			ctx.lineTo(points[1][0], points[1][1]);
 			ctx.stroke();
-			ctx.fill();
 		});
+		activeRuler
+			? drawPoint(ctx, activeRuler.get2d()[0].map((x) => (x + 0.5) * view.height) as Vec2)
+			: null;
 
 		requestAnimationFrame(drawLoop);
+	}
+
+	function drawPoint(ctx: CanvasRenderingContext2D, point: Vec2) {
+		ctx.beginPath();
+		ctx.arc(point[0], point[1], 3, 0, 2 * 3.15);
+		ctx.stroke();
+		ctx.fill();
 	}
 
 	enum MouseButton {
@@ -195,14 +197,16 @@
 	}
 
 	function pointRuler(xpos, ypos) {
-		let point = (multiply(inv(transform.fullTransform), [xpos, ypos, 1]) as unknown) as [
-			number,
-			number,
-			number
-		];
-		rawRulerPoints.push(point);
-		rawRulerPoints = rawRulerPoints;
-		console.log(rawRulerPoints);
+		const point: Vec3 = [xpos, ypos, 1];
+		if (activeRuler != null) {
+			activeRuler.add(point);
+			rulers.push(activeRuler);
+			activeRuler = null;
+		} else {
+			activeRuler = new Ruler();
+			activeRuler.setTransform(transform.fullTransform);
+			activeRuler.add(point);
+		}
 	}
 
 	onMount(() => {

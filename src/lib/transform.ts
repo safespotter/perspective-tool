@@ -1,7 +1,6 @@
 import { GPU, KernelFunction, KernelOutput } from 'gpu.js';
-import { multiply, inv, transpose, number, sum, subtract } from 'mathjs';
-
-export type Vec4D = [a: number, b: number, c: number, d: number];
+import { multiply, inv } from 'mathjs';
+import type { Vec3, Mat3, Mat4, Vec4, Mat4x3, Mat3x4 } from '$lib/shared';
 
 let gpu = new GPU();
 
@@ -18,10 +17,10 @@ function loadImage(image: HTMLImageElement) {
 
 export type TransformHandle = {
 	canvas: HTMLCanvasElement;
-	apply: (transform: any) => KernelOutput;
+	apply: (transform: Mat3) => KernelOutput;
 };
 
-export function createTransformHandle(dimension, image: HTMLImageElement): TransformHandle {
+export function createTransformHandle(dimension: number, image: HTMLImageElement): TransformHandle {
 	const texture = loadImage(image);
 
 	const texH = image.height;
@@ -84,7 +83,7 @@ export function createTransformHandle(dimension, image: HTMLImageElement): Trans
 	};
 }
 
-export function rotationXAxis(radians: number) {
+export function rotationXAxis(radians: number): Mat4 {
 	const c = Math.cos(radians);
 	const s = Math.sin(radians);
 	return [
@@ -95,7 +94,7 @@ export function rotationXAxis(radians: number) {
 	];
 }
 
-export function rotationYAxis(radians: number) {
+export function rotationYAxis(radians: number): Mat4 {
 	const c = Math.cos(radians);
 	const s = Math.sin(radians);
 	return [
@@ -106,7 +105,7 @@ export function rotationYAxis(radians: number) {
 	];
 }
 
-export function rotationZAxis(radians: number) {
+export function rotationZAxis(radians: number): Mat4 {
 	const c = Math.cos(radians);
 	const s = Math.sin(radians);
 	return [
@@ -117,7 +116,7 @@ export function rotationZAxis(radians: number) {
 	];
 }
 
-export function translate(x: number, y: number, z: number) {
+export function translate(x: number, y: number, z: number): Mat4 {
 	return [
 		[1, 0, 0, x],
 		[0, 1, 0, y],
@@ -126,7 +125,7 @@ export function translate(x: number, y: number, z: number) {
 	];
 }
 
-export function translatePlane(x: number, y: number, z: number) {
+export function translatePlane(x: number, y: number, z: number): Mat4 {
 	return [
 		[1, 0, 0, 0],
 		[0, 1, 0, 0],
@@ -135,7 +134,7 @@ export function translatePlane(x: number, y: number, z: number) {
 	];
 }
 
-export function translate2d(x: number, y: number) {
+export function translate2d(x: number, y: number): Mat3 {
 	return [
 		[1, 0, x],
 		[0, 1, y],
@@ -143,7 +142,7 @@ export function translate2d(x: number, y: number) {
 	];
 }
 
-export function scale(x: number, y: number, z: number) {
+export function scale(x: number, y: number, z: number): Mat4 {
 	return [
 		[x, 0, 0, 0],
 		[0, y, 0, 0],
@@ -152,7 +151,7 @@ export function scale(x: number, y: number, z: number) {
 	];
 }
 
-export function scale2d(x: number, y: number) {
+export function scale2d(x: number, y: number): Mat3 {
 	return [
 		[x, 0, 0],
 		[0, y, 0],
@@ -160,7 +159,7 @@ export function scale2d(x: number, y: number) {
 	];
 }
 
-export function zoom2d(s: number) {
+export function zoom2d(s: number): Mat3 {
 	return [
 		[1, 0, 0],
 		[0, 1, 0],
@@ -168,7 +167,7 @@ export function zoom2d(s: number) {
 	];
 }
 
-export function rotate2d(rad: number) {
+export function rotate2d(rad: number): Mat3 {
 	const c = Math.cos(rad);
 	const s = Math.sin(rad);
 	return [
@@ -178,11 +177,11 @@ export function rotate2d(rad: number) {
 	];
 }
 
-export function tr2dTo3d(zEquation: [A: number, B: number, C: number] = [0, 0, 0]) {
+export function tr2dTo3d(zEquation: Vec3 = [0, 0, 0]): Mat4x3 {
 	return [[1, 0, 0], [0, 1, 0], [...zEquation], [0, 0, 1]];
 }
 
-export function tr3dTo2d() {
+export function tr3dTo2d(): Mat3x4 {
 	return [
 		[1, 0, 0, 0],
 		[0, 1, 0, 0],
@@ -190,7 +189,7 @@ export function tr3dTo2d() {
 	];
 }
 
-export function restoreProjection(plane: Vec4D, focalLength: number) {
+export function restoreProjection(plane: Vec4, focalLength: number): Mat4x3 {
 	const [a, b, c, d] = plane;
 	const f = focalLength;
 	return [
@@ -201,7 +200,7 @@ export function restoreProjection(plane: Vec4D, focalLength: number) {
 	];
 }
 
-export function inverseScaleForVerticalProjection(plane: Vec4D, focalLength: number) {
+export function inverseScaleForVerticalProjection(plane: Vec4, focalLength: number): Vec3 {
 	const [a, b, c, d] = plane;
 	const f = focalLength;
 
@@ -224,7 +223,7 @@ export function restoreProjectionWithNavigation(camera, navigation) {
 	plane = multiply(inv(cameraRotation), plane).flat();
 	plane = multiply(translatePlane(planeOrigin[0], planeOrigin[1], planeOrigin[2]), plane).flat();
 
-	let projection = restoreProjection(plane as Vec4D, +camera.focal);
+	let projection: number[][] = restoreProjection(plane as Vec4, +camera.focal);
 	projection = multiply(tr3dTo2d(), multiply(imageTransform, projection));
 
 	let translated_pointer = multiply(projection, [-navigation.x, +navigation.y, 1]).flat();
@@ -238,7 +237,7 @@ export function restoreProjectionWithNavigation(camera, navigation) {
 		fullTransform: transform,
 		restoreProjectionTransform: projection,
 		inverseScaleForVerticalProjection: inverseScaleForVerticalProjection(
-			plane as Vec4D,
+			plane as Vec4,
 			+camera.focal
 		),
 	};
