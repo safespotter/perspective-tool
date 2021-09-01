@@ -6,13 +6,13 @@
 	import NumberInput from '$lib/NumberInput.svelte';
 	import ToggleButton from '$lib/ToggleButton.svelte';
 
-	import { createTransformHandle, restoreProjectionWithNavigation } from '$lib/transform';
+	import { createTransformHandle, computeTransform } from '$lib/transform';
 
 	import type { TransformHandle } from '$lib/transform';
 
 	import { onMount } from 'svelte';
 	import { multiply, pi, inv } from 'mathjs';
-	import type { Mat3, Vec2, Vec3 } from '$lib/shared';
+	import type { Camera, Mat3, Navigation, Vec2, Vec3 } from '$lib/shared';
 
 	const fileExtension = '_view.json';
 
@@ -25,7 +25,7 @@
 	let editRulers = false;
 	let cachedTransform: number[][] = null;
 
-	let camera = {
+	let camera: Camera = {
 		height: 0,
 		focal: 1,
 		pitch: 0,
@@ -33,39 +33,34 @@
 		roll: 0,
 	};
 
-	let navigation = {
+	let navigation: Navigation = {
 		x: 0,
 		y: 0,
 		zoom: 0.5,
 	};
 
-	$: transform = restoreProjectionWithNavigation(camera, navigation);
+	$: viewTransform = showOriginal
+		? ([
+				[1, 0, 0],
+				[0, 1, 0],
+				[0, 0, 2],
+		  ] as Mat3)
+		: computeTransform({ ...camera, height: 0 }, navigation);
+
+	$: realTransform = computeTransform(camera, { x: 0, y: 0, zoom: 1 });
 
 	let rulers: Ruler[] = [];
 	let activeRuler: Ruler = null;
 
 	$: {
-		const t: Mat3 = showOriginal
-			? [
-					[1, 0, 0],
-					[0, 1, 0],
-					[0, 0, 2],
-			  ]
-			: transform.fullTransform;
-		rulers.forEach((r) => r.setTransform(t));
-		activeRuler?.setTransform(t);
+		rulers.forEach((r) => r.setViewTransform(viewTransform));
+		activeRuler?.setViewTransform(viewTransform);
 	}
 
-	async function transformerLoop() {
-		const t = showOriginal
-			? [
-					[1, 0, 0],
-					[0, 1, 0],
-					[0, 0, 2],
-			  ]
-			: transform.fullTransform;
+	$: rulers.forEach((r) => r.setRealTransform(realTransform));
 
-		if (t === null) {
+	async function transformerLoop() {
+		if (viewTransform === null) {
 			transformHandle.canvas
 				.getContext('2d')
 				.clearRect(0, 0, transformHandle.canvas.width, transformHandle.canvas.height);
@@ -73,13 +68,13 @@
 			return;
 		}
 
-		if (t === cachedTransform) {
+		if (viewTransform === cachedTransform) {
 			setTimeout(transformerLoop);
 			return;
 		}
 
-		cachedTransform = t;
-		transformHandle.apply(t);
+		cachedTransform = viewTransform;
+		transformHandle.apply(viewTransform);
 		setTimeout(transformerLoop);
 	}
 
@@ -88,8 +83,8 @@
 		name = name.replace(/\.\w*$/, fileExtension);
 
 		const data = {
-			projection: transform.restoreProjectionTransform,
-			inverseScale: transform.inverseScaleForVerticalProjection,
+			camera: camera,
+			projection: realTransform,
 		};
 
 		const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application.json' });
@@ -210,11 +205,12 @@
 		const point: Vec3 = [xpos, ypos, 1];
 		if (activeRuler != null) {
 			activeRuler.add(point);
+			activeRuler.setRealTransform(realTransform);
 			rulers.push(activeRuler);
 			activeRuler = null;
 		} else {
 			activeRuler = new Ruler();
-			activeRuler.setTransform(transform.fullTransform);
+			activeRuler.setViewTransform(viewTransform);
 			activeRuler.add(point);
 		}
 	}
