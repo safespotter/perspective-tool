@@ -12,7 +12,7 @@
 
 	import { onMount } from 'svelte';
 	import { multiply, pi, inv } from 'mathjs';
-	import type { Vec2, Vec3 } from '$lib/shared';
+	import type { Mat3, Vec2, Vec3 } from '$lib/shared';
 
 	const fileExtension = '_view.json';
 
@@ -45,8 +45,15 @@
 	let activeRuler: Ruler = null;
 
 	$: {
-		rulers.forEach((r) => r.setTransform(transform.fullTransform));
-		activeRuler?.setTransform(transform.fullTransform);
+		const t: Mat3 = showOriginal
+			? [
+					[1, 0, 0],
+					[0, 1, 0],
+					[0, 0, 2],
+			  ]
+			: transform.fullTransform;
+		rulers.forEach((r) => r.setTransform(t));
+		activeRuler?.setTransform(t);
 	}
 
 	async function transformerLoop() {
@@ -109,6 +116,7 @@
 		ctx.drawImage(transformHandle.canvas, 0, 0, view.width, view.height);
 		ctx.strokeStyle = '#0f0';
 		ctx.fillStyle = '#0f0';
+		ctx.font = '24px Arial';
 		rulers.forEach((ruler) => {
 			let points = ruler.get2d();
 			points = points.map((p) => p.map((x) => (x + 0.5) * view.height)) as [Vec2, Vec2];
@@ -117,6 +125,8 @@
 			ctx.moveTo(points[0][0], points[0][1]);
 			ctx.lineTo(points[1][0], points[1][1]);
 			ctx.stroke();
+			const midPoint = ruler.getMidPoint().map((x) => (x + 0.5) * view.height);
+			ctx.fillText(`${ruler.getLength().toFixed(2)}m`, midPoint[0] - 24, midPoint[1]);
 		});
 		activeRuler
 			? drawPoint(ctx, activeRuler.get2d()[0].map((x) => (x + 0.5) * view.height) as Vec2)
@@ -207,6 +217,11 @@
 			activeRuler.setTransform(transform.fullTransform);
 			activeRuler.add(point);
 		}
+	}
+
+	function clearRulers() {
+		rulers = [];
+		activeRuler = null;
 	}
 
 	onMount(() => {
@@ -340,7 +355,10 @@
 			</fieldset>
 
 			<ToggleButton bind:flag={showOriginal}>Show original</ToggleButton>
-			<ToggleButton bind:flag={editRulers}>Rulers</ToggleButton>
+			<div class="row">
+				<ToggleButton bind:flag={editRulers}>Rulers</ToggleButton>
+				<button class="btn" on:click={clearRulers}>Clear</button>
+			</div>
 		</div>
 	</div>
 
@@ -383,9 +401,8 @@
 		margin: 0 auto;
 	}
 
-	.drawer input[type='checkbox'] {
-		width: 1rem;
-		height: 1rem;
-		margin-left: 0.5ch;
+	.row {
+		display: flex;
+		flex-direction: row;
 	}
 </style>

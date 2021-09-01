@@ -29,6 +29,11 @@ export class Ruler {
 		return [...this.points];
 	}
 
+	getMidPoint(): Vec2 {
+		const points = this.get2d();
+		return points[0].map((x, i) => (x + points[1][i]) / 2) as Vec2;
+	}
+
 	getLength() {
 		if (!this.isFull()) return 0;
 
