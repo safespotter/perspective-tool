@@ -222,9 +222,8 @@
 
 	onMount(() => {
 		try {
-			const type = $session.type;
-			const source = $session.source;
-			if (!type || !source) {
+			const imgData: ImageData = $session.imgData;
+			if (!imgData) {
 				throw new ReferenceError('No image found in session');
 			}
 
@@ -234,36 +233,18 @@
 				requestAnimationFrame(drawLoop);
 			}
 
-			switch (type) {
-				case 'image':
-					const image = new Image();
-					image.onload = (e) => start(image);
-					image.src = source;
-					break;
-				case 'video':
-					const video = document.createElement('video');
-					video.volume = 0;
+			const loader = document.createElement('canvas');
+			loader.width = imgData.width;
+			loader.height = imgData.height;
+			loader.getContext('2d').putImageData(imgData, 0, 0);
 
-					const videoCanvas = document.createElement('canvas');
-					video.oncanplay = (e) => {
-						videoCanvas.width = video.videoWidth;
-						videoCanvas.height = video.videoHeight;
-						videoCanvas.getContext('2d').drawImage(video, 0, 0);
-
-						const image = new Image();
-						image.onload = (e) => {
-							start(image);
-							video.remove();
-							videoCanvas.remove();
-						};
-						image.src = videoCanvas.toDataURL();
-					};
-
-					video.src = source;
-					break;
-				default:
-					throw new ReferenceError('Input type not supported');
-			}
+			const img = new Image();
+			img.onload = (e) => {
+				start(img);
+				img.remove();
+				loader.remove();
+			};
+			img.src = loader.toDataURL();
 		} catch (e) {
 			return goto(`${base}/`);
 		}
