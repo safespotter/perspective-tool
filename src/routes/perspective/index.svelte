@@ -6,7 +6,7 @@
 	import NumberInput from '$lib/NumberInput.svelte';
 	import ToggleButton from '$lib/ToggleButton.svelte';
 
-	import { createTransformHandle, computeTransform } from '$lib/transform';
+	import { createTransformHandle, computeTransform, invProjScale } from '$lib/transform';
 
 	import type { TransformHandle } from '$lib/transform';
 
@@ -85,6 +85,7 @@
 		const data = {
 			camera: camera,
 			projection: realTransform,
+			invscale: invProjScale(camera),
 		};
 
 		const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application.json' });

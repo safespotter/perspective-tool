@@ -200,9 +200,23 @@ export function restoreProjection(plane: Vec4, focalLength: number): Mat4x3 {
 	];
 }
 
-export function invProjScale(plane: Vec4, focalLength: number): Vec3 {
+export function invProjScale(camera: Camera): Vec3 {
+	const cameraRotation = multiply(
+		rotationZAxis(+camera.roll),
+		multiply(rotationYAxis(+camera.yaw), rotationXAxis(+camera.pitch))
+	);
+
+	const imageTransform = multiply(translate(0, 0, +camera.height), cameraRotation);
+
+	let planeOrigin = multiply(inv(imageTransform), [0, 0, 0, 1]).flat();
+	planeOrigin = planeOrigin.map((x) => x / planeOrigin[3]);
+
+	let plane = [0, 0, 1, 0];
+	plane = multiply(inv(cameraRotation), plane).flat();
+	plane = multiply(translatePlane(planeOrigin[0], planeOrigin[1], planeOrigin[2]), plane).flat();
+
 	const [a, b, c, d] = plane;
-	const f = focalLength;
+	const f = camera.focal;
 
 	const lambda = d + c * f;
 	return [a / lambda, b / lambda, (c * f) / lambda];
