@@ -219,7 +219,7 @@ export function invProjScale(camera: Camera): Vec3 {
 	const f = camera.focal;
 
 	const lambda = d + c * f;
-	return [a / lambda, b / lambda, (c * f) / lambda];
+	return [-a / lambda, -b / lambda, (c * f) / lambda];
 }
 
 export function computeTransform(camera: Camera, navigation: Navigation) {
