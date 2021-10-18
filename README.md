@@ -1,7 +1,3 @@
-# Link to the app
-
-https://nicolasansoni.github.io/safespotter_toolv2/
-
 # Instructions - EN
 
 The image can be manipulated entirely with the controls on the right. \

@@ -12,8 +12,8 @@ const config = {
 		target: '#svelte',
 		adapter: adapterStatic(),
 		// paths: {
-		// 	base: '/safespotter_toolv2',
-		// 	assets: '/safespotter_toolv2',
+		// 	base: '/perspective-tool',
+		// 	assets: '/perspective-tool',
 		// },
 	},
 };
