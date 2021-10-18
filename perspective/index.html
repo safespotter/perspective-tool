@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<link rel="icon" href="/favicon.png" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		
+
+		
+
+		<link rel="modulepreload" href="/perspective-tool/_app/start-2ef42097.js">
+		<link rel="modulepreload" href="/perspective-tool/_app/chunks/vendor-4d83dcfd.js">
+		<link rel="modulepreload" href="/perspective-tool/_app/chunks/paths-7dc55c62.js">
+		<link rel="modulepreload" href="/perspective-tool/_app/pages/__layout.svelte-f34f4f6d.js">
+		<link rel="modulepreload" href="/perspective-tool/_app/pages/perspective/index.svelte-c3a0c8b5.js">
+		<link rel="modulepreload" href="/perspective-tool/_app/chunks/stores-30a9c379.js">
+		<link rel="stylesheet" href="/perspective-tool/_app/assets/start-a8cd1609.css">
+		<link rel="stylesheet" href="/perspective-tool/_app/assets/pages/__layout.svelte-b1e8569a.css">
+		<link rel="stylesheet" href="/perspective-tool/_app/assets/pages/perspective/index.svelte-df46291b.css">
+
+		<script type="module">
+			import { start } from "/perspective-tool/_app/start-2ef42097.js";
+			start({
+				target: document.querySelector("#svelte"),
+				paths: {"base":"/perspective-tool","assets":"/perspective-tool"},
+				session: {},
+				host: location.host,
+				route: true,
+				spa: false,
+				trailing_slash: "never",
+				hydrate: {
+					status: 200,
+					error: null,
+					nodes: [
+						import("/perspective-tool/_app/pages/__layout.svelte-f34f4f6d.js"),
+						import("/perspective-tool/_app/pages/perspective/index.svelte-c3a0c8b5.js")
+					],
+					page: {
+						host: location.host, // TODO this is redundant
+						path: "/perspective",
+						query: new URLSearchParams(""),
+						params: {}
+					}
+				}
+			});
+		</script>
+		</head>
+		<body>
+			<div id="svelte">
+
+
+
+
+<main><div class="with-drawer svelte-1s6btjo"><canvas class="viewer svelte-1s6btjo">This webapp requires javascript
+</canvas>
+<div class="drawer svelte-1s6btjo"><fieldset class="svelte-1s6btjo"><legend class="svelte-1s6btjo">Navigation</legend>
+		<label class="label svelte-1yv36t6" for="navigation-zoom">Zoom</label>
+<div class="number-input svelte-1yv36t6"><button class="btn decrease svelte-1yv36t6">−
+	</button>
+	<input class="input svelte-1yv36t6" type="text" name="navigation-zoom" value="0.5">
+	<button class="btn increase svelte-1yv36t6">+
+	</button>
+</div>
+
+		<label class="label svelte-1yv36t6" for="navigation-x">X</label>
+<div class="number-input svelte-1yv36t6"><button class="btn decrease svelte-1yv36t6">−
+	</button>
+	<input class="input svelte-1yv36t6" type="text" name="navigation-x">
+	<button class="btn increase svelte-1yv36t6">+
+	</button>
+</div>
+
+		<label class="label svelte-1yv36t6" for="navigation-y">Y</label>
+<div class="number-input svelte-1yv36t6"><button class="btn decrease svelte-1yv36t6">−
+	</button>
+	<input class="input svelte-1yv36t6" type="text" name="navigation-y">
+	<button class="btn increase svelte-1yv36t6">+
+	</button>
+</div></fieldset>
+	<fieldset class="svelte-1s6btjo"><legend class="svelte-1s6btjo">Camera</legend>
+		<label class="label svelte-1yv36t6" for="focal">Focal length</label>
+<div class="number-input svelte-1yv36t6"><button class="btn decrease svelte-1yv36t6">−
+	</button>
+	<input class="input svelte-1yv36t6" type="text" name="focal" value="1">
+	<button class="btn increase svelte-1yv36t6">+
+	</button>
+</div>
+
+		<label class="label svelte-1yv36t6" for="height">Height</label>
+<div class="number-input svelte-1yv36t6"><button class="btn decrease svelte-1yv36t6">−
+	</button>
+	<input class="input svelte-1yv36t6" type="text" name="height">
+	<button class="btn increase svelte-1yv36t6">+
+	</button>
+</div>
+		<label class="label svelte-1yv36t6" for="pitch">Pitch</label>
+<div class="number-input svelte-1yv36t6"><button class="btn decrease svelte-1yv36t6">−
+	</button>
+	<input class="input svelte-1yv36t6" type="text" name="pitch">
+	<button class="btn increase svelte-1yv36t6">+
+	</button>
+</div>
+
+		<label class="label svelte-1yv36t6" for="yaw">Yaw</label>
+<div class="number-input svelte-1yv36t6"><button class="btn decrease svelte-1yv36t6">−
+	</button>
+	<input class="input svelte-1yv36t6" type="text" name="yaw">
+	<button class="btn increase svelte-1yv36t6">+
+	</button>
+</div></fieldset>
+
+	<button class="btn passive svelte-1e4wm07">Show original
+</button>
+	<div class="row svelte-1s6btjo"><button class="btn passive svelte-1e4wm07">Rulers
+</button>
+		<button class="btn svelte-1s6btjo">Clear</button></div></div></div>
+
+	<button class="btn svelte-1s6btjo">Save transform</button>
+	<a href="/perspective-tool/" class="btn svelte-1s6btjo" draggable="false">Back</a></main>
+
+<a hidden href="." download="">hidden</a>
+
+
+
+	
+</div>
+	</body>
+</html>
