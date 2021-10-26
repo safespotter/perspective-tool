@@ -243,7 +243,7 @@ export function computeTransform(camera: Camera, navigation: Navigation) {
 		multiply(imageTransform, projMat)
 	) as unknown) as Mat3;
 
-	let translatedPointer = multiply(projTransform, [-navigation.x, +navigation.y, 1]).flat();
+	let translatedPointer = multiply(projTransform, [+navigation.x, -navigation.y, 1]).flat();
 	translatedPointer = translatedPointer.map((x) => x / translatedPointer[2]);
 	const translation = translate2d(-translatedPointer[0], -translatedPointer[1]);
 
